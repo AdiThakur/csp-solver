@@ -193,6 +193,59 @@ class DiagonalWater(Constraint):
         return assignment[0] == Piece.Water or assignment[1] == Piece.Water
 
 
+class CSP:
+
+    variables: List[Cell]
+    domains: Dict[Cell, List[Piece]]
+    pruned_domains: Dict[Cell, List[Piece]]
+    constraints: Dict[Cell, List[Piece]]
+
+    gac_stack: List[Constraint]
+
+    def __init__(
+        self, variables: List[Cell], domains: Dict[Cell, List[Piece]],
+        constraints: Dict[Cell, List[Piece]]
+    ) -> None:
+        self.variables = variables
+        self.domains = domains
+        self.constraints = constraints
+        self.pruned_domains = {}
+        self.gac_stack = []
+
+    def gac_enforce(self) -> None:
+
+        while len(self.gac_stack) > 0:
+            constraint = self.gac_stack.pop()
+            for index, variable in enumerate(constraint.scope):
+                for value in self.domains[variable]:
+                    assignment = [-1] * len(constraint.scope)
+                    assignment[index] = value
+                    self._find_support(index, constraint, assignment, 0)
+
+
+    def _find_support(
+        self, support_for: int, constraint: Constraint,
+        assignment: List[Piece], variable_index: int
+    ) -> bool:
+
+        if variable_index == len(constraint.scope):
+            return constraint.is_satisfied(assignment)
+        if variable_index == support_for:
+            return self._find_support(
+                support_for, constraint, assignment, variable_index + 1
+            )
+
+        for value in self.domains[constraint.scope[variable_index]]:
+            assignment[variable_index] = value
+            valid = self._find_support(
+                support_for, constraint, assignment, variable_index + 1
+            )
+            if valid:
+                return True
+
+        return False
+
+
 def read_input(
     input_filename: str
 ) -> Tuple[Grid, List[str], List[str], List[str]]:
