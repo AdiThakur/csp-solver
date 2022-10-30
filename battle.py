@@ -51,6 +51,9 @@ class Constraint(ABC):
 
     scope: List[Cell] = []
 
+    def  __init__(self, scope: List[Cell]) -> None:
+        self.scope = scope
+
     @abstractmethod
     # The order of variable assignments in parameter <assignment>
     # must match order of variables in scope
@@ -60,36 +63,36 @@ class Constraint(ABC):
 
 class HorizontalConstraint(Constraint):
 
-    def __init__(self, cells: List[Cell]) -> None:
+    def __init__(self, scope: List[Cell]) -> None:
 
-        row = cells[0][0]
-        prev_col = cells[0][1] - 1
+        row = scope[0][0]
+        prev_col = scope[0][1] - 1
 
-        for cell in cells:
+        for cell in scope:
             if cell[0] != row:
                 raise Exception("All Cells must be on the same row")
             if prev_col + 1 != cell[1]:
                 raise Exception("All Cells must be contiguous")
             prev_col = cell[1]
 
-        self.scope = cells
+        super().__init__(scope)
 
 
 class VerticalConstraint(Constraint):
 
-    def __init__(self, cells: List[Cell]) -> None:
+    def __init__(self, scope: List[Cell]) -> None:
 
-        col = cells[0][1]
-        prev_row = cells[0][0] - 1
+        col = scope[0][1]
+        prev_row = scope[0][0] - 1
 
-        for cell in cells:
+        for cell in scope:
             if cell[1] != col:
                 raise Exception("All Cells must be on the same column")
             if prev_row + 1 != cell[0]:
                 raise Exception("All Cells must be contiguous")
             prev_row = cell[0]
 
-        self.scope = cells
+        super().__init__(scope)
 
 
 class DestroyerHorizontal(HorizontalConstraint):
@@ -158,6 +161,36 @@ class BattleshipVertical(VerticalConstraint):
             return True
         return assignment[1] == Piece.B_M and assignment[2] == Piece.B_M \
             and assignment[3] == Piece.B_V_E;
+
+
+class ShipSum(Constraint):
+
+    sum: int = 0
+
+    def __init__(self, scope: List[Cell], sum: int) -> None:
+        super().__init__(scope)
+        self.sum = sum
+
+    def is_satisfied(self, assignment: List[Piece]) -> bool:
+        curr_sum = 0
+        for value in assignment:
+            if value != Piece.Water:
+                curr_sum += 1
+
+        return self.sum == curr_sum
+
+
+class DiagonalWater(Constraint):
+
+    # d1 is the top diagonal in pair, d2 is bottom
+    def __init__(self, scope: List[Cell]) -> None:
+        d1, d2 = scope
+        if (d1[0] == d2[0]) or (d1[1] == d2[1]):
+            raise Exception("Invalid diagonal")
+        super().__init__(scope)
+
+    def is_satisfied(self, assignment: List[Piece]) -> bool:
+        return assignment[0] == Piece.Water or assignment[1] == Piece.Water
 
 
 def read_input(

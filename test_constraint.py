@@ -227,5 +227,86 @@ class TestBattleshipVertical(unittest.TestCase):
 
         self.assertFalse(result)
 
+
+class TestSum(unittest.TestCase):
+    def test_all_water(self):
+        assignment = [Piece.Water] * 4
+        sut = ShipSum(
+            sum=4,
+            scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
+        )
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+    def test_less_than_sum(self):
+        assignment = [Piece.Water, Piece.Water, Piece.Sub, Piece.Water]
+        sut = ShipSum(
+            sum=4,
+            scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
+        )
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+    def test_more_than_sum(self):
+        assignment = [Piece.Sub, Piece.B_H_S, Piece.Sub, Piece.Water]
+        sut = ShipSum(
+            sum=2,
+            scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
+        )
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+    def test_just_right(self):
+        assignment = [Piece.Sub, Piece.B_H_S, Piece.Sub, Piece.Water]
+        sut = ShipSum(
+            sum=3,
+            scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
+        )
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+
+class TestWater(unittest.TestCase):
+    def test_both_water(self):
+        assignment = [Piece.Water, Piece.Water]
+        sut = DiagonalWater([(0, 0), (1, 1)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+    def test_first_water(self):
+        assignment = [Piece.Water, Piece.B_M]
+        sut = DiagonalWater([(0, 0), (1, 1)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+    def test_second_water(self):
+        assignment = [Piece.Sub, Piece.Water]
+        sut = DiagonalWater([(0, 0), (1, 1)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+    def test_both_ship(self):
+        assignment = [Piece.Sub, Piece.B_H_E]
+        sut = DiagonalWater([(0, 0), (1, 1)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+
 if __name__ == "__main__":
     unittest.main()
