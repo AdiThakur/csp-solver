@@ -20,7 +20,7 @@ input_chars = {
 }
 
 
-class Piece(Enum):
+class PieceType(Enum):
     # Water
     Water = 0
     # Submarine (1x1)
@@ -39,12 +39,25 @@ class Piece(Enum):
     C_V_S = 9
     C_V_E = 10
 
-    # Cruiser (1x3)
+    # Battleship (1x4)
     B_H_S = 11
     B_H_E = 12
-    B_M = 13
-    B_V_S = 14
-    B_V_E = 15
+    # First middle piece
+    B_M_F = 13
+    # Second middle piece
+    B_M_S = 14
+    B_V_S = 15
+    B_V_E = 16
+
+
+class Piece:
+
+    id: int
+    ptype: PieceType
+
+    def __init__(self, id: int, ptype: PieceType) -> None:
+        self.id = id
+        self.ptype = ptype
 
 
 class Constraint(ABC):
@@ -53,6 +66,13 @@ class Constraint(ABC):
 
     def  __init__(self, scope: List[Cell]) -> None:
         self.scope = scope
+
+    def _ids_match(self, assignment: List[Piece]) -> bool:
+        id = assignment[0].id
+        for a in assignment:
+            if a.id != id:
+                return False
+        return True
 
     @abstractmethod
     # The order of variable assignments in parameter <assignment>
@@ -101,9 +121,9 @@ class DestroyerHorizontal(HorizontalConstraint):
         if len(assignment) != 2:
             raise Exception("Invalid (horizontal) Destroyer Assignment")
 
-        if assignment[0] != Piece.D_H_S:
+        if assignment[0].ptype != PieceType.D_H_S:
             return True
-        return assignment[1] == Piece.D_H_E;
+        return assignment[1].ptype == PieceType.D_H_E and self._ids_match(assignment)
 
 
 class DestroyerVertical(VerticalConstraint):
@@ -112,9 +132,9 @@ class DestroyerVertical(VerticalConstraint):
         if len(assignment) != 2:
             raise Exception("Invalid (vertical) Destroyer Assignment")
 
-        if assignment[0] != Piece.D_V_S:
+        if assignment[0].ptype != PieceType.D_V_S:
             return True
-        return assignment[1] == Piece.D_V_E;
+        return assignment[1].ptype == PieceType.D_V_E and self._ids_match(assignment)
 
 
 class CruiserHorizontal(HorizontalConstraint):
@@ -123,9 +143,11 @@ class CruiserHorizontal(HorizontalConstraint):
         if len(assignment) != 3:
             raise Exception("Invalid (horizontal) Cruiser Assignment")
 
-        if assignment[0] != Piece.C_H_S:
+        if assignment[0].ptype != PieceType.C_H_S:
             return True
-        return assignment[1] == Piece.C_M and assignment[2] == Piece.C_H_E;
+        return assignment[1].ptype == PieceType.C_M and \
+            assignment[2].ptype == PieceType.C_H_E and \
+            self._ids_match(assignment)
 
 
 class CruiserVertical(VerticalConstraint):
@@ -134,9 +156,11 @@ class CruiserVertical(VerticalConstraint):
         if len(assignment) != 3:
             raise Exception("Invalid (vertical) Cruiser Assignment")
 
-        if assignment[0] != Piece.C_V_S:
+        if assignment[0].ptype != PieceType.C_V_S:
             return True
-        return assignment[1] == Piece.C_M and assignment[2] == Piece.C_V_E;
+        return assignment[1].ptype == PieceType.C_M and \
+            assignment[2].ptype == PieceType.C_V_E and \
+            self._ids_match(assignment)
 
 
 class BattleshipHorizontal(HorizontalConstraint):
@@ -145,10 +169,12 @@ class BattleshipHorizontal(HorizontalConstraint):
         if len(assignment) != 4:
             raise Exception("Invalid (horizontal) Battleship Assignment")
 
-        if assignment[0] != Piece.B_H_S:
+        if assignment[0].ptype != PieceType.B_H_S:
             return True
-        return assignment[1] == Piece.B_M and assignment[2] == Piece.B_M \
-            and assignment[3] == Piece.B_H_E;
+        return assignment[1].ptype == PieceType.B_M_F and \
+            assignment[2].ptype == PieceType.B_M_S and \
+            assignment[3].ptype == PieceType.B_H_E and \
+            self._ids_match(assignment)
 
 
 class BattleshipVertical(VerticalConstraint):
@@ -157,10 +183,12 @@ class BattleshipVertical(VerticalConstraint):
         if len(assignment) != 4:
             raise Exception("Invalid (vertical) Battleship Assignment")
 
-        if assignment[0] != Piece.B_V_S:
+        if assignment[0].ptype != PieceType.B_V_S:
             return True
-        return assignment[1] == Piece.B_M and assignment[2] == Piece.B_M \
-            and assignment[3] == Piece.B_V_E;
+        return assignment[1].ptype == PieceType.B_M_F and \
+            assignment[2].ptype == PieceType.B_M_S and \
+            assignment[3].ptype == PieceType.B_V_E and \
+            self._ids_match(assignment)
 
 
 class ShipSum(Constraint):
@@ -174,7 +202,7 @@ class ShipSum(Constraint):
     def is_satisfied(self, assignment: List[Piece]) -> bool:
         curr_sum = 0
         for value in assignment:
-            if value != Piece.Water:
+            if value.ptype != PieceType.Water:
                 curr_sum += 1
 
         return self.sum == curr_sum
@@ -190,7 +218,7 @@ class DiagonalWater(Constraint):
         super().__init__(scope)
 
     def is_satisfied(self, assignment: List[Piece]) -> bool:
-        return assignment[0] == Piece.Water or assignment[1] == Piece.Water
+        return assignment[0].ptype == PieceType.Water or assignment[1].ptype == PieceType.Water
 
 
 class CSP:
@@ -380,22 +408,22 @@ def read_input(
 def generate_domain_from_coordinate(coord: Cell) -> List[Piece]:
     pass
 
-def generate_domain_from_hint(hint: str) -> List[Piece]:
+def generate_domain_from_hint(hint: str) -> List[PieceType]:
 
     if hint == 'S':
-        return [Piece.Sub]
+        return [PieceType.Sub]
     if hint == 'W':
-        return [Piece.Water]
+        return [PieceType.Water]
     if hint == 'L':
-        return [Piece.D_H_S, Piece.C_H_S, Piece.B_H_S]
+        return [PieceType.D_H_S, PieceType.C_H_S, PieceType.B_H_S]
     if hint == 'R':
-        return [Piece.D_H_E, Piece.C_H_E, Piece.B_H_E]
+        return [PieceType.D_H_E, PieceType.C_H_E, PieceType.B_H_E]
     if hint == 'T':
-        return [Piece.D_V_S, Piece.C_V_S, Piece.B_V_S]
+        return [PieceType.D_V_S, PieceType.C_V_S, PieceType.B_V_S]
     if hint == 'B':
-        return [Piece.D_V_E, Piece.C_V_E, Piece.B_V_E]
+        return [PieceType.D_V_E, PieceType.C_V_E, PieceType.B_V_E]
     if hint == 'M':
-        return [Piece.C_M, Piece.B_M]
+        return [PieceType.C_M, PieceType.B_M]
 
 def main(input_filename: str, output_filename: str) -> None:
     # generate constraints for grid;
