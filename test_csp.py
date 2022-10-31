@@ -89,7 +89,7 @@ class TestGacEnforce(unittest.TestCase):
         sut.gac_stack = [cruiser_h_con, cruiser_v_con]
 
         # Act
-        result = sut.gac_enforce(0)
+        result = sut._gac_enforce(0)
 
         self.assertTrue(result)
 

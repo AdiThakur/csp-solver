@@ -197,10 +197,11 @@ class CSP:
 
     variables: List[Cell]
     domains: Dict[Cell, List[Piece]]
-    pruned_domains: Dict[int, Dict[Cell, List[Piece]]]
     constraints: List[Constraint]
-    vars_to_cons: Dict[Cell, List[Constraint]]
 
+    vars_to_cons: Dict[Cell, List[Constraint]]
+    pruned_domains: Dict[int, Dict[Cell, List[Piece]]]
+    assigned: Dict[Cell, bool]
     gac_stack: List[Constraint]
 
     def __init__(
@@ -209,17 +210,89 @@ class CSP:
         domains: Dict[Cell, List[Piece]],
         constraints: List[Constraint],
         vars_to_cons: Dict[Cell, List[Constraint]]
-    ) -> None:
+        ) -> None:
+
         self.variables = variables
         self.domains = domains
-        self.pruned_domains = {}
         self.constraints = constraints
+
         self.vars_to_cons = vars_to_cons
+        self.pruned_domains = {}
+        self._init_assigned()
         self.gac_stack = []
 
-    def gac_enforce(self, gac_level: int) -> bool:
+    def _init_assigned(self) -> None:
+        self.assigned = {}
+        for variable in self.variables:
+            self.assigned[variable] = False
+
+    def gac(self, gac_level: int) -> bool:
+
+        var = self._pick_unassigned_variable()
+        if var is None:
+            return True
 
         self.pruned_domains[gac_level] = {}
+        self.assigned[var] = True
+
+        for val_index in range(self.domains[var]):
+
+            # Prune all other values for current variable
+            for other_index in range(self.domains[var]):
+                if val_index != other_index:
+                    self._prune_value(gac_level, var, other_index)
+
+            # Build gac-stack
+            for constraint in self.vars_to_cons[var]:
+                self.gac_stack.append(constraint)
+
+            # CSP is GAC
+            if self._gac_enforce(gac_level):
+                if self.gac(gac_level + 1):
+                    return True
+
+            # Restore domains of all affected variables
+            for affected_var in self.pruned_domains[gac_level]:
+                self.domains[affected_var].extend(
+                    self.pruned_domains[gac_level][affected_var]
+                )
+                self.pruned_domains[gac_level][affected_var] = []
+
+        self.assigned[var] = False
+        self.pruned_domains.pop(gac_level, None)
+
+        return False
+
+    def _prune_value(
+        self, gac_level: int, variable: Cell, index_to_prune: int
+        ) -> None:
+
+        val_to_prune = self.domains[variable][index_to_prune]
+        self.domains[variable][index_to_prune] = self.domains[variable][-1]
+        self.domains[variable].pop()
+
+        if variable not in self.pruned_domains[gac_level]:
+            self.pruned_domains[gac_level][variable] = []
+
+        self.pruned_domains[gac_level][variable].append(val_to_prune)
+
+    def _pick_unassigned_variable(self) -> Optional[Cell]:
+
+        mrv_variable: Optional[Cell] = None
+        min_domain = 100
+
+        for variable in self.variables:
+            if self.assigned[variable]:
+                continue
+            domain_len = len(self.domains[variable])
+            if domain_len < min_domain:
+                min_domain = domain_len
+                mrv_variable = variable
+
+        return mrv_variable
+
+    # Returns True if CSP is GAC, False if DWO occurs
+    def _gac_enforce(self, gac_level: int) -> bool:
 
         while len(self.gac_stack) > 0:
 
@@ -237,11 +310,7 @@ class CSP:
                     if support_found:
                         continue
 
-                    # Prune value from domain
-                    self.domains[variable][value_index] = self.domains[variable][-1]
-                    if variable not in self.pruned_domains[gac_level]:
-                        self.pruned_domains[gac_level][variable] = []
-                    self.pruned_domains[gac_level][variable].append(self.domains[variable].pop())
+                    self._prune_value(gac_level, variable, value_index)
 
                     # DWO
                     if len(self.domains[variable]) == 0:
@@ -256,9 +325,12 @@ class CSP:
         return True
 
     def _find_support(
-        self, support_for: int, constraint: Constraint,
-        assignment: List[Piece], variable_index: int
-    ) -> bool:
+        self,
+        support_for: int,
+        constraint: Constraint,
+        assignment: List[Piece],
+        variable_index: int
+        ) -> bool:
 
         if variable_index == len(constraint.scope):
             return constraint.is_satisfied(assignment)
