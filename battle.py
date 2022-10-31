@@ -221,12 +221,16 @@ class CSP:
         self._init_assigned()
         self.gac_stack = []
 
+    def satisfy(self) -> bool:
+        self._gac_enforce(0)
+        return self._gac(0)
+
     def _init_assigned(self) -> None:
         self.assigned = {}
         for variable in self.variables:
             self.assigned[variable] = False
 
-    def gac(self, gac_level: int) -> bool:
+    def _gac(self, gac_level: int) -> bool:
 
         var = self._pick_unassigned_variable()
         if var is None:
@@ -248,7 +252,7 @@ class CSP:
 
             # CSP is GAC
             if self._gac_enforce(gac_level):
-                if self.gac(gac_level + 1):
+                if self._gac(gac_level + 1):
                     return True
 
             # Restore domains of all affected variables
@@ -352,7 +356,7 @@ class CSP:
 
 def read_input(
     input_filename: str
-) -> Tuple[Grid, List[str], List[str], List[str]]:
+) -> Tuple[List[int], List[int], List[int], Grid]:
 
     row_cons = []
     col_cons = []
@@ -363,18 +367,68 @@ def read_input(
 
         lines = file.readlines()
 
-        row_cons = [*lines[0].strip()]
-        col_cons = [*lines[1].strip()]
-        ship_cons = [*lines[2].strip()]
+        row_cons = [int(i) for i in lines[0].strip()]
+        col_cons = [int(i) for i in lines[1].strip()]
+        ship_cons = [int(i) for i in lines[2].strip()]
 
         for line in lines[3:]:
             grid.append([*line.strip()])
 
-    return grid, row_cons, col_cons, ship_cons
+    return row_cons, col_cons, ship_cons, grid
 
+
+def generate_domain_from_coordinate(coord: Cell) -> List[Piece]:
+    pass
+
+def generate_domain_from_hint(hint: str) -> List[Piece]:
+
+    if hint == 'S':
+        return [Piece.Sub]
+    if hint == 'W':
+        return [Piece.Water]
+    if hint == 'L':
+        return [Piece.D_H_S, Piece.C_H_S, Piece.B_H_S]
+    if hint == 'R':
+        return [Piece.D_H_E, Piece.C_H_E, Piece.B_H_E]
+    if hint == 'T':
+        return [Piece.D_V_S, Piece.C_V_S, Piece.B_V_S]
+    if hint == 'B':
+        return [Piece.D_V_E, Piece.C_V_E, Piece.B_V_E]
+    if hint == 'M':
+        return [Piece.C_M, Piece.B_M]
 
 def main(input_filename: str, output_filename: str) -> None:
-    grid, row_cons, col_cons, ship_cons = read_input(input_filename)
+    # generate constraints for grid;
+    # generate row constraints
+    # generate col constraints
+
+    row_cons, col_cons, ship_cons, grid = read_input(input_filename)
+    dimension = len(grid)
+
+    # Normally variables are stored in a 1D list, but here it is stored as a
+    # 2D grid for easier domain and constrain generations
+    vars_in_grid = []
+    domains: Dict[Cell, List[Piece]] = []
+
+    # Create variables
+    for row in range(len(grid)):
+        vars_in_row = []
+        for col in range(len(grid[row])):
+            vars_in_row.append((row, col))
+        vars_in_grid.append(vars_in_row)
+
+    # Create domains for variables
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            if grid[row][col] == '0':
+                domain = generate_domain_from_coordinate((row, col))
+            else:
+                domain = generate_domain_from_hint(grid[row][col])
+            domains[(row, col)] = domain
+
+    print(domains)
+
+
 
 
 if __name__ == "__main__":
