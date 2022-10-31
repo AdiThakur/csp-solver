@@ -197,31 +197,63 @@ class CSP:
 
     variables: List[Cell]
     domains: Dict[Cell, List[Piece]]
-    pruned_domains: Dict[Cell, List[Piece]]
-    constraints: Dict[Cell, List[Piece]]
+    pruned_domains: Dict[int, Dict[Cell, List[Piece]]]
+    constraints: List[Constraint]
+    vars_to_cons: Dict[Cell, List[Constraint]]
 
     gac_stack: List[Constraint]
 
     def __init__(
-        self, variables: List[Cell], domains: Dict[Cell, List[Piece]],
-        constraints: Dict[Cell, List[Piece]]
+        self,
+        variables: List[Cell],
+        domains: Dict[Cell, List[Piece]],
+        constraints: List[Constraint],
+        vars_to_cons: Dict[Cell, List[Constraint]]
     ) -> None:
         self.variables = variables
         self.domains = domains
-        self.constraints = constraints
         self.pruned_domains = {}
+        self.constraints = constraints
+        self.vars_to_cons = vars_to_cons
         self.gac_stack = []
 
-    def gac_enforce(self) -> None:
+    def gac_enforce(self, gac_level: int) -> bool:
+
+        self.pruned_domains[gac_level] = {}
 
         while len(self.gac_stack) > 0:
-            constraint = self.gac_stack.pop()
-            for index, variable in enumerate(constraint.scope):
-                for value in self.domains[variable]:
-                    assignment = [-1] * len(constraint.scope)
-                    assignment[index] = value
-                    self._find_support(index, constraint, assignment, 0)
 
+            constraint = self.gac_stack.pop()
+
+            for variable_index, variable in enumerate(constraint.scope):
+                for value_index, value in enumerate(self.domains[variable]):
+
+                    assignment = [-1] * len(constraint.scope)
+                    assignment[variable_index] = value
+                    support_found = self._find_support(
+                        variable_index, constraint, assignment, 0
+                    )
+
+                    if support_found:
+                        continue
+
+                    # Prune value from domain
+                    self.domains[variable][value_index] = self.domains[variable][-1]
+                    if variable not in self.pruned_domains[gac_level]:
+                        self.pruned_domains[gac_level][variable] = []
+                    self.pruned_domains[gac_level][variable].append(self.domains[variable].pop())
+
+                    # DWO
+                    if len(self.domains[variable]) == 0:
+                        self.gac_stack = []
+                        return False
+
+                    for constraint in self.vars_to_cons[variable]:
+                        # TODO: Implement a Hash augmented stack for faster lookup
+                        if constraint not in self.gac_stack:
+                            self.gac_stack.append(constraint)
+
+        return True
 
     def _find_support(
         self, support_for: int, constraint: Constraint,
@@ -283,3 +315,5 @@ if __name__ == "__main__":
         input_filename=sys.argv[1],
         output_filename=sys.argv[2]
     )
+
+# TODO: Prune domain based off coordinates; clearly cell at (0,0) can't have a middle or end piece type
