@@ -25,39 +25,34 @@ class PieceType(Enum):
     Water = 0
     # Submarine (1x1)
     Sub = 1
-
     # Destroyer (1x2)
-    D_H_S = 2
-    D_H_E = 3
-    D_V_S = 4
-    D_V_E = 5
-
+    D_S = 20
+    D_E = 21
     # Cruiser (1x3)
-    C_H_S = 6
-    C_H_E = 7
-    C_M = 8
-    C_V_S = 9
-    C_V_E = 10
-
+    C_S = 31
+    C_M = 32
+    C_E = 33
     # Battleship (1x4)
-    B_H_S = 11
-    B_H_E = 12
-    # First middle piece
-    B_M_F = 13
-    # Second middle piece
-    B_M_S = 14
-    B_V_S = 15
-    B_V_E = 16
-
+    B_S = 41
+    B_M1 = 42
+    B_M2 = 43
+    B_E = 44
 
 class Piece:
 
     id: int
+    orientation: int
     ptype: PieceType
 
-    def __init__(self, id: int, ptype: PieceType) -> None:
+    # Horizontal Orientation
+    H = 0
+    # Vertical Orientation
+    V = 1
+
+    def __init__(self, id: int, ptype: PieceType, orientation: int) -> None:
         self.id = id
         self.ptype = ptype
+        self.orientation = orientation
 
 
 class Constraint(ABC):
@@ -67,10 +62,11 @@ class Constraint(ABC):
     def  __init__(self, scope: List[Cell]) -> None:
         self.scope = scope
 
-    def _ids_match(self, assignment: List[Piece]) -> bool:
+    def _id_and_orient_match(self, assignment: List[Piece]) -> bool:
         id = assignment[0].id
+        orientation = assignment[0].orientation
         for a in assignment:
-            if a.id != id:
+            if (a.id != id) or (a.orientation != orientation):
                 return False
         return True
 
@@ -81,117 +77,46 @@ class Constraint(ABC):
         pass
 
 
-class HorizontalConstraint(Constraint):
-
-    def __init__(self, scope: List[Cell]) -> None:
-
-        row = scope[0][0]
-        prev_col = scope[0][1] - 1
-
-        for cell in scope:
-            if cell[0] != row:
-                raise Exception("All Cells must be on the same row")
-            if prev_col + 1 != cell[1]:
-                raise Exception("All Cells must be contiguous")
-            prev_col = cell[1]
-
-        super().__init__(scope)
-
-
-class VerticalConstraint(Constraint):
-
-    def __init__(self, scope: List[Cell]) -> None:
-
-        col = scope[0][1]
-        prev_row = scope[0][0] - 1
-
-        for cell in scope:
-            if cell[1] != col:
-                raise Exception("All Cells must be on the same column")
-            if prev_row + 1 != cell[0]:
-                raise Exception("All Cells must be contiguous")
-            prev_row = cell[0]
-
-        super().__init__(scope)
-
-
-class DestroyerHorizontal(HorizontalConstraint):
+class DestroyerConstraint(Constraint):
 
     def is_satisfied(self, assignment: List[Piece]) -> bool:
         if len(assignment) != 2:
             raise Exception("Invalid (horizontal) Destroyer Assignment")
 
-        if assignment[0].ptype != PieceType.D_H_S:
+        if assignment[0].ptype != PieceType.D_S:
             return True
-        return assignment[1].ptype == PieceType.D_H_E and self._ids_match(assignment)
+        return assignment[1].ptype == PieceType.D_E and \
+            self._id_and_orient_match(assignment)
 
 
-class DestroyerVertical(VerticalConstraint):
-
-    def is_satisfied(self, assignment: List[Piece]) -> bool:
-        if len(assignment) != 2:
-            raise Exception("Invalid (vertical) Destroyer Assignment")
-
-        if assignment[0].ptype != PieceType.D_V_S:
-            return True
-        return assignment[1].ptype == PieceType.D_V_E and self._ids_match(assignment)
-
-
-class CruiserHorizontal(HorizontalConstraint):
+class CruiserConstraint(Constraint):
 
     def is_satisfied(self, assignment: List[Piece]) -> bool:
         if len(assignment) != 3:
             raise Exception("Invalid (horizontal) Cruiser Assignment")
 
-        if assignment[0].ptype != PieceType.C_H_S:
+        if assignment[0].ptype != PieceType.C_S:
             return True
         return assignment[1].ptype == PieceType.C_M and \
-            assignment[2].ptype == PieceType.C_H_E and \
-            self._ids_match(assignment)
+            assignment[2].ptype == PieceType.C_E and \
+            self._id_and_orient_match(assignment)
 
 
-class CruiserVertical(VerticalConstraint):
-
-    def is_satisfied(self, assignment: List[Piece]) -> bool:
-        if len(assignment) != 3:
-            raise Exception("Invalid (vertical) Cruiser Assignment")
-
-        if assignment[0].ptype != PieceType.C_V_S:
-            return True
-        return assignment[1].ptype == PieceType.C_M and \
-            assignment[2].ptype == PieceType.C_V_E and \
-            self._ids_match(assignment)
-
-
-class BattleshipHorizontal(HorizontalConstraint):
+class BattleshipConstraint(Constraint):
 
     def is_satisfied(self, assignment: List[Piece]) -> bool:
         if len(assignment) != 4:
             raise Exception("Invalid (horizontal) Battleship Assignment")
 
-        if assignment[0].ptype != PieceType.B_H_S:
+        if assignment[0].ptype != PieceType.B_S:
             return True
-        return assignment[1].ptype == PieceType.B_M_F and \
-            assignment[2].ptype == PieceType.B_M_S and \
-            assignment[3].ptype == PieceType.B_H_E and \
-            self._ids_match(assignment)
+        return assignment[1].ptype == PieceType.B_M1 and \
+            assignment[2].ptype == PieceType.B_M2 and \
+            assignment[3].ptype == PieceType.B_E and \
+            self._id_and_orient_match(assignment)
 
 
-class BattleshipVertical(VerticalConstraint):
-
-    def is_satisfied(self, assignment: List[Piece]) -> bool:
-        if len(assignment) != 4:
-            raise Exception("Invalid (vertical) Battleship Assignment")
-
-        if assignment[0].ptype != PieceType.B_V_S:
-            return True
-        return assignment[1].ptype == PieceType.B_M_F and \
-            assignment[2].ptype == PieceType.B_M_S and \
-            assignment[3].ptype == PieceType.B_V_E and \
-            self._ids_match(assignment)
-
-
-class ShipSum(Constraint):
+class LineSumConstraint(Constraint):
 
     sum: int = 0
 
@@ -208,7 +133,7 @@ class ShipSum(Constraint):
         return self.sum == curr_sum
 
 
-class DiagonalWater(Constraint):
+class DiagonalConstraint(Constraint):
 
     # d1 is the top diagonal in pair, d2 is bottom
     def __init__(self, scope: List[Cell]) -> None:

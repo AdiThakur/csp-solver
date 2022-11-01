@@ -7,15 +7,27 @@ class TestFindSupport(unittest.TestCase):
         # Arrange
         variables = [(0, 1), (0, 2), (0, 3)]
         domains = {
-            (0, 1): { Piece(1, PieceType.C_H_S) },
-            (0, 2): { Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E) },
-            (0, 3): { Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E) }
+            (0, 1): [
+                Piece(1, PieceType.C_S, Piece.H)
+            ],
+            (0, 2): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H)
+            ],
+            (0, 3): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H)
+            ]
         }
-        constraint = CruiserHorizontal(variables)
+        constraint = CruiserConstraint(variables)
 
         support_for = 0
         assignment = [-1] * 3
-        assignment[support_for] = Piece(1, PieceType.C_H_S)
+        assignment[support_for] = Piece(1, PieceType.C_S, Piece.H)
 
         sut = CSP(variables, domains, [constraint], { (0, 1): constraint })
 
@@ -31,15 +43,27 @@ class TestFindSupport(unittest.TestCase):
         # Arrange
         variables = [(3, 3), (3, 4), (3, 5)]
         domains = {
-            (3, 3): { Piece(1, PieceType.C_H_S) },
-            (3, 4): { Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_H_E) },
-            (3, 5): { Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E) }
+            (3, 3): [
+                Piece(1, PieceType.C_S, Piece.V)
+            ],
+            (3, 4): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H)
+            ],
+            (3, 5): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H)
+            ]
         }
-        constraint = CruiserHorizontal(variables)
+        constraint = CruiserConstraint(variables)
 
         support_for = 0
         assignment = [-1] * 3
-        assignment[support_for] = Piece(1, PieceType.C_H_S)
+        assignment[support_for] = Piece(1, PieceType.C_S, Piece.V)
 
         sut = CSP(variables, domains, [constraint], { (3, 3): constraint })
 
@@ -62,15 +86,35 @@ class TestGacEnforce(unittest.TestCase):
         ]
 
         domains = {
-            (0, 0): [ Piece(1, PieceType.C_H_S)],
-            (0, 1): [ Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E) ],
-            (0, 2): [ Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E) ],
-            (1, 0): [ Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E) ],
-            (2, 0): [ Piece(0, PieceType.Water), Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E) ]
+            (0, 0): [ Piece(1, PieceType.C_S, Piece.H)],
+            (0, 1): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H),
+            ],
+            (0, 2): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H)
+            ],
+            (1, 0): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H)
+            ],
+            (2, 0): [
+                Piece(0, PieceType.Water, Piece.H),
+                Piece(1, PieceType.C_S, Piece.H),
+                Piece(1, PieceType.C_M, Piece.H),
+                Piece(1, PieceType.C_E, Piece.H)
+            ]
         }
 
-        cruiser_h_con = CruiserHorizontal([(0, 0), (0, 1), (0, 2)])
-        cruiser_v_con = CruiserVertical([(0, 0), (1, 0), (2, 0)])
+        cruiser_h_con = CruiserConstraint([(0, 0), (0, 1), (0, 2)])
+        cruiser_v_con = CruiserConstraint([(0, 0), (1, 0), (2, 0)])
 
         vars_to_cons = {
             (0, 0): [cruiser_h_con, cruiser_v_con],

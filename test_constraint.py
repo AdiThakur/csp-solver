@@ -5,40 +5,44 @@ from battle import *
 class TestDestroyerHorizontal(unittest.TestCase):
 
     def test_vacuous_assignment(self):
-        assignment = [Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M)]
-        sut = DestroyerHorizontal([(0, 0), (0, 1)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(1, PieceType.C_M, Piece.H)
+        ]
+        sut = DestroyerConstraint([(0, 0), (0, 1)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_ideal_assignment(self):
-        assignment = [Piece(1, PieceType.D_H_S), Piece(1, PieceType.D_H_E)]
-        sut = DestroyerHorizontal([(0, 0), (0, 1)])
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.H),
+            Piece(1, PieceType.D_E, Piece.H)
+        ]
+        sut = DestroyerConstraint([(0, 0), (0, 1)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
-    def test_invalid_assignment1(self):
-        assignment = [Piece(1, PieceType.D_H_S), Piece(0, PieceType.Water)]
-        sut = DestroyerHorizontal([(0, 0), (0, 1)])
-
-        result = sut.is_satisfied(assignment)
-
-        self.assertFalse(result)
-
-    def test_invalid_assignment2(self):
-        assignment = [Piece(1, PieceType.D_H_S), Piece(1, PieceType.D_V_E)]
-        sut = DestroyerHorizontal([(0, 0), (0, 1)])
+    def test_invalid_assignment_missing_end(self):
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.H),
+            Piece(0, PieceType.Water, Piece.H)
+        ]
+        sut = DestroyerConstraint([(0, 0), (0, 1)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_invalid_assignment_wrong_id(self):
-        assignment = [Piece(1, PieceType.D_H_S), Piece(2, PieceType.D_H_E)]
-        sut = DestroyerHorizontal([(0, 0), (0, 1)])
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.H),
+            Piece(2, PieceType.D_E, Piece.H)
+        ]
+        sut = DestroyerConstraint([(0, 0), (0, 1)])
 
         result = sut.is_satisfied(assignment)
 
@@ -48,40 +52,55 @@ class TestDestroyerHorizontal(unittest.TestCase):
 class TestDestroyerVertical(unittest.TestCase):
 
     def test_vacuous_assignment(self):
-        assignment = [Piece(1, PieceType.C_V_S), Piece(1, PieceType.C_M)]
-        sut = DestroyerVertical([(0, 0), (1, 0)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.V),
+            Piece(1, PieceType.C_M, Piece.V)
+        ]
+        sut = DestroyerConstraint([(0, 0), (1, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_ideal_assignment(self):
-        assignment = [Piece(1, PieceType.D_V_S), Piece(1, PieceType.D_V_E)]
-        sut = DestroyerVertical([(0, 0), (1, 0)])
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.V),
+            Piece(1, PieceType.D_E, Piece.V)
+        ]
+        sut = DestroyerConstraint([(0, 0), (1, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
-    def test_invalid_assignment1(self):
-        assignment = [Piece(1, PieceType.D_V_S), Piece(0, PieceType.Water)]
-        sut = DestroyerVertical([(0, 0), (1, 0)])
-
-        result = sut.is_satisfied(assignment)
-
-        self.assertFalse(result)
-
-    def test_invalid_assignment2(self):
-        assignment = [Piece(1, PieceType.D_V_S), Piece(1, PieceType.D_H_E)]
-        sut = DestroyerVertical([(0, 0), (1, 0)])
+    def test_invalid_assignment_missing_end(self):
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.V),
+            Piece(0, PieceType.Water, Piece.V)
+        ]
+        sut = DestroyerConstraint([(0, 0), (1, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_invalid_assignment_wrong_id(self):
-        assignment = [Piece(1, PieceType.D_V_S), Piece(2, PieceType.D_V_E)]
-        sut = DestroyerVertical([(0, 0), (1, 0)])
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.V),
+            Piece(2, PieceType.D_E, Piece.V)
+        ]
+        sut = DestroyerConstraint([(0, 0), (1, 0)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+    def test_invalid_assignment_wrong_orientation(self):
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.H),
+            Piece(1, PieceType.D_E, Piece.V)
+        ]
+        sut = DestroyerConstraint([(0, 0), (1, 0)])
 
         result = sut.is_satisfied(assignment)
 
@@ -91,40 +110,72 @@ class TestDestroyerVertical(unittest.TestCase):
 class TestCruiserHorizontal(unittest.TestCase):
 
     def test_vacuous_assignment(self):
-        assignment = [Piece(1, PieceType.B_H_S), Piece(1, PieceType.B_M_F), Piece(1, PieceType.B_M_S)]
-        sut = CruiserHorizontal([(0, 0), (0, 1), (0, 2)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.H),
+            Piece(1, PieceType.B_M1, Piece.H),
+            Piece(1, PieceType.B_M2, Piece.H)
+        ]
+        sut = CruiserConstraint([(0, 0), (0, 1), (0, 2)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_ideal_assignment(self):
-        assignment = [Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_H_E)]
-        sut = CruiserHorizontal([(0, 0), (0, 1), (0, 2)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(1, PieceType.C_M, Piece.H),
+            Piece(1, PieceType.C_E, Piece.H)
+        ]
+        sut = CruiserConstraint([(0, 0), (0, 1), (0, 2)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_missing_middle(self):
-        assignment = [Piece(1, PieceType.C_H_S), Piece(0, PieceType.Water), Piece(1, PieceType.C_H_E)]
-        sut = CruiserHorizontal([(0, 0), (0, 1), (0, 2)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(1, PieceType.C_E, Piece.H)
+        ]
+        sut = CruiserConstraint([(0, 0), (0, 1), (0, 2)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_missing_end(self):
-        assignment = [Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(0, PieceType.Water)]
-        sut = CruiserHorizontal([(0, 0), (0, 1), (0, 2)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(1, PieceType.C_M, Piece.H),
+            Piece(0, PieceType.Water, Piece.H)
+        ]
+        sut = CruiserConstraint([(0, 0), (0, 1), (0, 2)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_invalid_assignment_wrong_id(self):
-        assignment = [Piece(1, PieceType.C_H_S), Piece(1, PieceType.C_M), Piece(2, PieceType.C_H_E)]
-        sut = CruiserHorizontal([(0, 0), (0, 1), (0, 2)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(1, PieceType.C_M, Piece.H),
+            Piece(2, PieceType.C_E, Piece.H)
+        ]
+        sut = CruiserConstraint([(0, 0), (0, 1), (0, 2)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+    def test_invalid_assignment_wrong_orientation(self):
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(1, PieceType.C_M, Piece.V),
+            Piece(1, PieceType.C_E, Piece.H)
+        ]
+        sut = CruiserConstraint([(0, 0), (0, 1), (0, 2)])
 
         result = sut.is_satisfied(assignment)
 
@@ -134,40 +185,60 @@ class TestCruiserHorizontal(unittest.TestCase):
 class TestCruiserVertical(unittest.TestCase):
 
     def test_vacuous_assignment(self):
-        assignment = [Piece(1, PieceType.B_V_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_V_E)]
-        sut = CruiserVertical([(0, 0), (1, 0), (2, 0)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.V),
+            Piece(1, PieceType.C_M, Piece.V),
+            Piece(1, PieceType.C_E, Piece.V)
+        ]
+        sut = CruiserConstraint([(0, 0), (1, 0), (2, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_ideal_assignment(self):
-        assignment = [Piece(1, PieceType.C_V_S), Piece(1, PieceType.C_M), Piece(1, PieceType.C_V_E)]
-        sut = CruiserVertical([(0, 0), (1, 0), (2, 0)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.V),
+            Piece(1, PieceType.C_M, Piece.V),
+            Piece(1, PieceType.C_E, Piece.V)
+        ]
+        sut = CruiserConstraint([(0, 0), (1, 0), (2, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_missing_middle(self):
-        assignment = [Piece(1, PieceType.C_V_S), Piece(0, PieceType.Water), Piece(1, PieceType.C_V_E)]
-        sut = CruiserVertical([(0, 0), (1, 0), (2, 0)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.V),
+            Piece(0, PieceType.Water, Piece.V),
+            Piece(1, PieceType.C_E, Piece.V)
+        ]
+        sut = CruiserConstraint([(0, 0), (1, 0), (2, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_missing_end(self):
-        assignment = [Piece(1, PieceType.C_V_S), Piece(1, PieceType.C_M), Piece(1, PieceType.Water)]
-        sut = CruiserVertical([(0, 0), (1, 0), (2, 0)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.V),
+            Piece(1, PieceType.C_M, Piece.V),
+            Piece(1, PieceType.Water, Piece.V)
+        ]
+        sut = CruiserConstraint([(0, 0), (1, 0), (2, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_invalid_assignment_wrong_id(self):
-        assignment = [Piece(1, PieceType.C_V_S), Piece(2, PieceType.C_M), Piece(1, PieceType.C_V_E)]
-        sut = CruiserVertical([(0, 0), (1, 0), (2, 0)])
+        assignment = [
+            Piece(1, PieceType.C_S, Piece.V),
+            Piece(2, PieceType.C_M, Piece.V),
+            Piece(1, PieceType.C_E, Piece.V)
+        ]
+        sut = CruiserConstraint([(0, 0), (1, 0), (2, 0)])
 
         result = sut.is_satisfied(assignment)
 
@@ -177,48 +248,91 @@ class TestCruiserVertical(unittest.TestCase):
 class TestBattleshipHorizontal(unittest.TestCase):
 
     def test_vacuous_assignment(self):
-        assignment = [Piece(1, PieceType.Sub), Piece(0, PieceType.Water), Piece(2, PieceType.Sub), Piece(2, PieceType.Sub)]
-        sut = BattleshipHorizontal([(0, 0), (0, 1), (0, 2), (0, 3)])
+        assignment = [
+            Piece(1, PieceType.Sub, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(2, PieceType.Sub, Piece.H),
+            Piece(2, PieceType.Sub, Piece.H)
+        ]
+        sut = BattleshipConstraint([(0, 0), (0, 1), (0, 2), (0, 3)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_ideal_assignment(self):
-        assignment = [Piece(1, PieceType.B_H_S), Piece(1, PieceType.B_M_F), Piece(1, PieceType.B_M_S), Piece(1, PieceType.B_H_E)]
-        sut = BattleshipHorizontal([(0, 0), (0, 1), (0, 2), (0, 3)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.H),
+            Piece(1, PieceType.B_M1, Piece.H),
+            Piece(1, PieceType.B_M2, Piece.H),
+            Piece(1, PieceType.B_E, Piece.H)
+        ]
+        sut = BattleshipConstraint([(0, 0), (0, 1), (0, 2), (0, 3)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_missing_middle1(self):
-        assignment = [Piece(1, PieceType.B_H_S), Piece(0, PieceType.Water), Piece(1, PieceType.B_M_S), Piece(1, PieceType.B_H_E)]
-        sut = BattleshipHorizontal([(0, 0), (0, 1), (0, 2), (0, 3)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(1, PieceType.B_M2, Piece.H),
+            Piece(1, PieceType.B_E, Piece.H)
+        ]
+        sut = BattleshipConstraint([(0, 0), (0, 1), (0, 2), (0, 3)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_missing_middle2(self):
-        assignment = [Piece(1, PieceType.B_H_S), Piece(1, PieceType.B_M_F), Piece(0, PieceType.Water), Piece(1, PieceType.B_H_E)]
-        sut = BattleshipHorizontal([(0, 0), (0, 1), (0, 2), (0, 3)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.H),
+            Piece(1, PieceType.B_M1, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(1, PieceType.B_E, Piece.H)
+        ]
+        sut = BattleshipConstraint([(0, 0), (0, 1), (0, 2), (0, 3)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_missing_end(self):
-        assignment = [Piece(1, PieceType.B_H_S), Piece(1, PieceType.B_M_F), Piece(1, PieceType.B_M_S), Piece(0, PieceType.Water)]
-        sut = BattleshipHorizontal([(0, 0), (0, 1), (0, 2), (0, 3)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.H),
+            Piece(1, PieceType.B_M1, Piece.H),
+            Piece(1, PieceType.B_M2, Piece.H),
+            Piece(0, PieceType.Water, Piece.H)
+        ]
+        sut = BattleshipConstraint([(0, 0), (0, 1), (0, 2), (0, 3)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_invalid_assignment_wrong_id(self):
-        assignment = [Piece(1, PieceType.B_H_S), Piece(1, PieceType.B_M_F), Piece(2, PieceType.B_M_S), Piece(3, PieceType.B_H_E)]
-        sut = BattleshipHorizontal([(0, 0), (0, 1), (0, 2), (0, 3)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.H),
+            Piece(1, PieceType.B_M1, Piece.H),
+            Piece(2, PieceType.B_M2, Piece.H),
+            Piece(3, PieceType.B_E, Piece.H)
+        ]
+        sut = BattleshipConstraint([(0, 0), (0, 1), (0, 2), (0, 3)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+    def test_invalid_assignment_wrong_orientation(self):
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.V),
+            Piece(1, PieceType.B_M1, Piece.H),
+            Piece(2, PieceType.B_M2, Piece.V),
+            Piece(3, PieceType.B_E, Piece.H)
+        ]
+        sut = BattleshipConstraint([(0, 0), (0, 1), (0, 2), (0, 3)])
 
         result = sut.is_satisfied(assignment)
 
@@ -228,40 +342,66 @@ class TestBattleshipHorizontal(unittest.TestCase):
 class TestBattleshipVertical(unittest.TestCase):
 
     def test_vacuous_assignment(self):
-        assignment = [Piece(1, PieceType.Sub), Piece(0, PieceType.Water), Piece(0, PieceType.Water), Piece(2, PieceType.Sub)]
-        sut = BattleshipVertical([(0, 0), (1, 0), (2, 0), (3, 0)])
+        assignment = [
+            Piece(1, PieceType.Sub, Piece.V),
+            Piece(0, PieceType.Water, Piece.V),
+            Piece(0, PieceType.Water, Piece.V),
+            Piece(2, PieceType.Sub, Piece.V)
+        ]
+        sut = BattleshipConstraint([(0, 0), (1, 0), (2, 0), (3, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_ideal_assignment(self):
-        assignment = [Piece(1, PieceType.B_V_S), Piece(1, PieceType.B_M_F), Piece(1, PieceType.B_M_S), Piece(1, PieceType.B_V_E)]
-        sut = BattleshipVertical([(0, 0), (1, 0), (2, 0), (3, 0)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.V),
+            Piece(1, PieceType.B_M1, Piece.V),
+            Piece(1, PieceType.B_M2, Piece.V),
+            Piece(1, PieceType.B_E, Piece.V)
+        ]
+        sut = BattleshipConstraint([(0, 0), (1, 0), (2, 0), (3, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_missing_middle1(self):
-        assignment = [Piece(1, PieceType.B_V_S), Piece(0, PieceType.Water), Piece(1, PieceType.B_M_S), Piece(1, PieceType.B_V_E)]
-        sut = BattleshipVertical([(0, 0), (1, 0), (2, 0), (3, 0)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.V),
+            Piece(0, PieceType.Water, Piece.V),
+            Piece(1, PieceType.B_M1, Piece.V),
+            Piece(1, PieceType.B_E, Piece.V)
+        ]
+
+        sut = BattleshipConstraint([(0, 0), (1, 0), (2, 0), (3, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_missing_middle2(self):
-        assignment = [Piece(1, PieceType.B_V_S), Piece(1, PieceType.B_M_F), Piece(0, PieceType.Water), Piece(1, PieceType.B_V_E)]
-        sut = BattleshipVertical([(0, 0), (1, 0), (2, 0), (3, 0)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.V),
+            Piece(1, PieceType.B_M1, Piece.V),
+            Piece(0, PieceType.Water, Piece.V),
+            Piece(1, PieceType.B_E, Piece.V)
+        ]
+        sut = BattleshipConstraint([(0, 0), (1, 0), (2, 0), (3, 0)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertFalse(result)
 
     def test_missing_end(self):
-        assignment = [Piece(1, PieceType.B_V_S), Piece(1, PieceType.B_M_F), Piece(1, PieceType.B_M_S), Piece(0, PieceType.Water)]
-        sut = BattleshipVertical([(0, 0), (1, 0), (2, 0), (3, 0)])
+        assignment = [
+            Piece(1, PieceType.B_S, Piece.V),
+            Piece(1, PieceType.B_M1, Piece.V),
+            Piece(1, PieceType.B_M2, Piece.V),
+            Piece(0, PieceType.Water, Piece.V)
+        ]
+        sut = BattleshipConstraint([(0, 0), (1, 0), (2, 0), (3, 0)])
 
         result = sut.is_satisfied(assignment)
 
@@ -270,8 +410,8 @@ class TestBattleshipVertical(unittest.TestCase):
 
 class TestSum(unittest.TestCase):
     def test_all_water(self):
-        assignment = [Piece(0, PieceType.Water)] * 4
-        sut = ShipSum(
+        assignment = [Piece(0, PieceType.Water, Piece.H)] * 4
+        sut = LineSumConstraint(
             sum=4,
             scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
         )
@@ -282,10 +422,12 @@ class TestSum(unittest.TestCase):
 
     def test_less_than_sum(self):
         assignment = [
-            Piece(0, PieceType.Water), Piece(0, PieceType.Water),
-            Piece(0, PieceType.Water), Piece(1, PieceType.Sub)
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(1, PieceType.Sub, Piece.H)
         ]
-        sut = ShipSum(
+        sut = LineSumConstraint(
             sum=4,
             scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
         )
@@ -296,10 +438,12 @@ class TestSum(unittest.TestCase):
 
     def test_more_than_sum(self):
         assignment = [
-            Piece(1, PieceType.C_H_S), Piece(1, PieceType.Sub),
-            Piece(0, PieceType.Water), Piece(2, PieceType.Sub)
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(1, PieceType.Sub, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(2, PieceType.Sub, Piece.H)
         ]
-        sut = ShipSum(
+        sut = LineSumConstraint(
             sum=2,
             scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
         )
@@ -310,10 +454,12 @@ class TestSum(unittest.TestCase):
 
     def test_just_right(self):
         assignment = [
-            Piece(1, PieceType.C_H_S), Piece(1, PieceType.Sub),
-            Piece(0, PieceType.Water), Piece(2, PieceType.Sub)
+            Piece(1, PieceType.C_S, Piece.H),
+            Piece(1, PieceType.Sub, Piece.H),
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(2, PieceType.Sub, Piece.H)
         ]
-        sut = ShipSum(
+        sut = LineSumConstraint(
             sum=3,
             scope=[(0, 1), (0, 2), (0, 3), (0, 4)]
         )
@@ -325,32 +471,41 @@ class TestSum(unittest.TestCase):
 
 class TestWater(unittest.TestCase):
     def test_both_water(self):
-        assignment = [Piece(0, PieceType.Water)] * 2
-        sut = DiagonalWater([(0, 0), (1, 1)])
+        assignment = [Piece(0, PieceType.Water, Piece.H)] * 2
+        sut = DiagonalConstraint([(0, 0), (1, 1)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_first_water(self):
-        assignment = [Piece(0, PieceType.Water), Piece(1, PieceType.C_M)]
-        sut = DiagonalWater([(0, 0), (1, 1)])
+        assignment = [
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(1, PieceType.C_M, Piece.H)
+        ]
+        sut = DiagonalConstraint([(0, 0), (1, 1)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_second_water(self):
-        assignment = [Piece(1, PieceType.C_M), Piece(0, PieceType.Water)]
-        sut = DiagonalWater([(0, 0), (1, 1)])
+        assignment = [
+            Piece(1, PieceType.C_M, Piece.H),
+            Piece(0, PieceType.Water, Piece.H)
+        ]
+        sut = DiagonalConstraint([(0, 0), (1, 1)])
 
         result = sut.is_satisfied(assignment)
 
         self.assertTrue(result)
 
     def test_both_ship(self):
-        assignment = [Piece(1, PieceType.C_M), Piece(1, PieceType.Sub)]
-        sut = DiagonalWater([(0, 0), (1, 1)])
+        assignment = [
+            Piece(1, PieceType.C_M, Piece.H),
+            Piece(1, PieceType.Sub, Piece.H)
+        ]
+        sut = DiagonalConstraint([(0, 0), (1, 1)])
 
         result = sut.is_satisfied(assignment)
 
