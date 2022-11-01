@@ -6,6 +6,8 @@ from typing import *
 
 Grid = List[List[str]]
 Cell = Tuple[int, int]
+# list of sub pieces, list of starting segment pieces, list of middle segment pieces, list of ending segment pieces
+PossiblePieces = Tuple[List['Piece'], List['Piece'], List['Piece'], List['Piece']]
 
 
 input_chars = {
@@ -387,43 +389,89 @@ def generate_pieces(
     return pieces
 
 
-def generate_domain_from_coordinate(coord: Cell) -> List[Piece]:
-    pass
+def generate_variables(grid: Grid) -> List[List[Cell]]:
 
-def generate_domain_from_hint(hint: str) -> List[PieceType]:
-    pass
+    vars = []
 
-def main(input_filename: str, output_filename: str) -> None:
-    # generate constraints for grid;
-    # generate row constraints
-    # generate col constraints
-
-    row_cons, col_cons, ship_count, grid = read_input(input_filename)
-    dimension = len(grid)
-
-    # Normally variables are stored in a 1D list, but here it is stored as a
-    # 2D grid for easier domain and constrain generations
-    vars_in_grid = []
-
-    # Create variables
     for row in range(len(grid)):
         vars_in_row = []
         for col in range(len(grid[row])):
             vars_in_row.append((row, col))
-        vars_in_grid.append(vars_in_row)
+        vars.append(vars_in_row)
 
-    # Create domains for variables
+    return vars
+
+
+def generate_domains(
+    grid: Grid, pieces: List[Piece]
+    ) -> Dict[Cell, List[Piece]]:
+
+    domains = {}
+
     for row in range(len(grid)):
         for col in range(len(grid[row])):
             if grid[row][col] == '0':
-                domain = generate_domain_from_coordinate((row, col))
+                domain = generate_domain_from_coordinate((row, col), pieces)
             else:
-                domain = generate_domain_from_hint(grid[row][col])
+                domain = generate_domain_from_hint(grid[row][col], pieces)
             domains[(row, col)] = domain
 
-    print(domains)
+    return domains
 
 
+def generate_domain_from_coordinate(
+    coord: Cell,
+    pieces: PossiblePieces
+    ) -> List[Piece]:
+    pass
+
+
+def filter_pieces_by_orientation(
+    pieces: List[Piece], orientation: int) -> List[Piece]:
+
+    matching_pieces = []
+    for piece in pieces:
+        if piece.orientation == orientation:
+            matching_pieces.append(piece)
+    return matching_pieces
+
+
+def generate_domain_from_hint(
+    hint: str, pieces: PossiblePieces) -> List[Piece]:
+
+    if hint == 'S':
+        return pieces[0]
+    if hint == 'W':
+        return [Piece(id=0, ptype=PieceType.Water, orientation=Piece.H)]
+    if hint == 'L':
+        return filter_pieces_by_orientation(pieces[1], Piece.H)
+    if hint == 'R':
+        return filter_pieces_by_orientation(pieces[3], Piece.H)
+    if hint == 'T':
+        return filter_pieces_by_orientation(pieces[1], Piece.V)
+    if hint == 'B':
+        return filter_pieces_by_orientation(pieces[3], Piece.V)
+    if hint == 'M':
+        return pieces[2]
+
+    return []
+
+
+def main(input_filename: str, output_filename: str) -> None:
+    # generate pieces (based on ship counts)
+    # generate variables
+    # assign starting domain to each variable
+    # generate constraints for grid;
+        # generate row constraints
+        # generate col constraints
+        # generate diagonal water constraints
+        # generate ship constraints for each ship
+        # generate unique ship constraints for every pair of cells
+
+    row_cons, col_cons, ship_count, grid = read_input(input_filename)
+    vars = generate_variables(grid)
+    pieces = generate_pieces(ship_count)
+    domains = generate_domains(grid, pieces)
 
 
 if __name__ == "__main__":

@@ -35,5 +35,60 @@ class TestGeneratePieces(unittest.TestCase):
 
         self.assertEqual(16, len(battle_ships))
 
+
+class TestGenerateDomainFromHint(unittest.TestCase):
+    def test_sub_hint(self):
+        pieces = generate_pieces([1, 1, 1, 1])
+
+        result = generate_domain_from_hint('S', pieces)
+
+        self.assertEqual(1, len(result))
+        for piece in result:
+            self.assertEqual(PieceType.Sub, piece.ptype)
+
+    def test_top_hint(self):
+        pieces = generate_pieces([1, 1, 1, 1])
+
+        result = generate_domain_from_hint('T', pieces)
+
+        self.assertEqual(3, len(result))
+        for piece in result:
+            self.assertEqual(Piece.V, piece.orientation)
+
+    def test_top_hint(self):
+        pieces = generate_pieces([1, 1, 1, 1])
+
+        result = generate_domain_from_hint('B', pieces)
+
+        self.assertEqual(3, len(result))
+        for piece in result:
+            self.assertEqual(Piece.V, piece.orientation)
+
+    def test_left_hint(self):
+        pieces = generate_pieces([1, 1, 1, 1])
+
+        result = generate_domain_from_hint('L', pieces)
+
+        self.assertEqual(3, len(result))
+        for piece in result:
+            self.assertEqual(Piece.H, piece.orientation)
+
+    def test_right_hint(self):
+        pieces = generate_pieces([1, 1, 1, 1])
+
+        result = generate_domain_from_hint('R', pieces)
+
+        self.assertEqual(3, len(result))
+        for piece in result:
+            self.assertEqual(Piece.H, piece.orientation)
+
+    def test_middle_hint(self):
+        pieces = generate_pieces([1, 1, 1, 1])
+
+        result = generate_domain_from_hint('M', pieces)
+
+        self.assertEqual(6, len(result))
+
+
 if __name__ == "__main__":
     unittest.main()
