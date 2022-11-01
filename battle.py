@@ -54,6 +54,9 @@ class Piece:
         self.ptype = ptype
         self.orientation = orientation
 
+    def __repr__(self) -> str:
+        return f"Id: {self.id}, Type: {self.ptype}, orient: {self.orientation}"
+
 
 class Constraint(ABC):
 
@@ -330,38 +333,77 @@ def read_input(
     return row_cons, col_cons, ship_cons, grid
 
 
+# Returns pieces in three groups: subs, start pieces, middle pieces, end pieces
+def generate_pieces(
+    ship_count: List[int]
+    ) -> Tuple[List[Piece], List[Piece], List[Piece], List[Piece]]:
+
+    # submarines, destroyers, cruisers and battleships
+    SUB = 0
+    START = 1
+    MID = 2
+    END = 3
+    pieces = ([], [], [], [])
+
+    # Subs
+    for i in range(ship_count[0]):
+        pieces[SUB].append(
+            Piece(i, PieceType.Sub, Piece.H)
+        )
+
+    # Destroyers
+    for i in range(ship_count[1]):
+
+        pieces[START].append(Piece(i, PieceType.D_S, Piece.H))
+        pieces[END].append(Piece(i, PieceType.D_E, Piece.H))
+
+        pieces[START].append(Piece(i, PieceType.D_S, Piece.V))
+        pieces[END].append(Piece(i, PieceType.D_E, Piece.V))
+
+    # Cruisers
+    for i in range(ship_count[2]):
+
+        pieces[START].append(Piece(i, PieceType.C_S, Piece.H))
+        pieces[MID].append(Piece(i, PieceType.C_M, Piece.H))
+        pieces[END].append(Piece(i, PieceType.C_E, Piece.H))
+
+        pieces[START].append(Piece(i, PieceType.C_S, Piece.V))
+        pieces[MID].append(Piece(i, PieceType.C_M, Piece.V))
+        pieces[END].append(Piece(i, PieceType.C_E, Piece.V))
+
+    # Cruisers
+    for i in range(ship_count[3]):
+
+        pieces[START].append(Piece(i, PieceType.B_S, Piece.H))
+        pieces[MID].append(Piece(i, PieceType.B_M1, Piece.H))
+        pieces[MID].append(Piece(i, PieceType.B_M2, Piece.H))
+        pieces[END].append(Piece(i, PieceType.B_E, Piece.H))
+
+        pieces[START].append(Piece(i, PieceType.B_S, Piece.V))
+        pieces[MID].append(Piece(i, PieceType.B_M1, Piece.V))
+        pieces[MID].append(Piece(i, PieceType.B_M2, Piece.V))
+        pieces[END].append(Piece(i, PieceType.B_E, Piece.V))
+
+    return pieces
+
+
 def generate_domain_from_coordinate(coord: Cell) -> List[Piece]:
     pass
 
 def generate_domain_from_hint(hint: str) -> List[PieceType]:
-
-    if hint == 'S':
-        return [PieceType.Sub]
-    if hint == 'W':
-        return [PieceType.Water]
-    if hint == 'L':
-        return [PieceType.D_H_S, PieceType.C_H_S, PieceType.B_H_S]
-    if hint == 'R':
-        return [PieceType.D_H_E, PieceType.C_H_E, PieceType.B_H_E]
-    if hint == 'T':
-        return [PieceType.D_V_S, PieceType.C_V_S, PieceType.B_V_S]
-    if hint == 'B':
-        return [PieceType.D_V_E, PieceType.C_V_E, PieceType.B_V_E]
-    if hint == 'M':
-        return [PieceType.C_M, PieceType.B_M]
+    pass
 
 def main(input_filename: str, output_filename: str) -> None:
     # generate constraints for grid;
     # generate row constraints
     # generate col constraints
 
-    row_cons, col_cons, ship_cons, grid = read_input(input_filename)
+    row_cons, col_cons, ship_count, grid = read_input(input_filename)
     dimension = len(grid)
 
     # Normally variables are stored in a 1D list, but here it is stored as a
     # 2D grid for easier domain and constrain generations
     vars_in_grid = []
-    domains: Dict[Cell, List[Piece]] = []
 
     # Create variables
     for row in range(len(grid)):
