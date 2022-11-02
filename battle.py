@@ -508,21 +508,64 @@ def generate_domain_from_hint(
     return []
 
 
+def add_constraint_for_var(
+    vars_to_cons: Dict[Cell, List[Constraint]],
+    var: Cell,
+    constraint: Constraint) -> None:
+    if var not in vars_to_cons:
+        vars_to_cons[var] = []
+    vars_to_cons[var].append(constraint)
+
+
+def add_constraint_for_vars(
+    vars_to_cons: Dict[Cell, List[Constraint]],
+    vars: List[Cell],
+    constraint: Constraint) -> None:
+    for var in vars:
+        add_constraint_for_var(vars_to_cons, var, constraint)
+
+
+def generate_sum_constraints(
+    vars: Grid,
+    vars_to_cons: Dict[Cell, List[Constraint]],
+    row_sums: List[int],
+    col_sums: List[int]) -> List[LineSumConstraint]:
+
+    constraints = []
+
+    # Add rows
+    for index, row in enumerate(vars):
+        row_sum_con = LineSumConstraint(scope=row, sum=row_sums[index])
+        constraints.append(row_sum_con)
+        add_constraint_for_vars(vars_to_cons, row, row_sum_con)
+
+    # Add cols
+    for col in range(len(vars)):
+        cells_in_col = [row[col] for row in vars]
+        col_sum_con = LineSumConstraint(scope=cells_in_col, sum=col_sums[col])
+        constraints.append(col_sum_con)
+        add_constraint_for_vars(vars_to_cons, cells_in_col, col_sum_con)
+
+    return constraints
+
+
 def main(input_filename: str, output_filename: str) -> None:
-    # generate pieces (based on ship counts)
-    # generate variables
-    # assign starting domain to each variable
-    # generate constraints for grid;
-        # generate row constraints
-        # generate col constraints
+
+    row_sums, col_sums, ship_count, grid = read_input(input_filename)
+    vars = generate_variables(grid)
+    pieces = generate_ship_pieces(ship_count)
+    domains = generate_domains(grid, pieces)
+
+    # TODO: generate constraints for grid;
         # generate diagonal water constraints
         # generate ship constraints for each ship
         # generate unique ship constraints for every pair of cells
 
-    row_cons, col_cons, ship_count, grid = read_input(input_filename)
-    vars = generate_variables(grid)
-    pieces = generate_ship_pieces(ship_count)
-    domains = generate_domains(grid, pieces)
+    vars_to_cons = {}
+
+    row_and_col_sum_cons = generate_sum_constraints(
+        vars, vars_to_cons, row_sums, col_sums
+    )
 
 
 if __name__ == "__main__":
