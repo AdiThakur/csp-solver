@@ -512,5 +512,62 @@ class TestWater(unittest.TestCase):
         self.assertFalse(result)
 
 
+class TestUnique(unittest.TestCase):
+    def test_first_is_water(self):
+        assignment = [
+            Piece(0, PieceType.Water, Piece.H),
+            Piece(1, PieceType.D_S, Piece.V)
+        ]
+        sut = UniqueConstraint([(0, 0), (3, 3)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+    def test_second_is_water(self):
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.V),
+            Piece(0, PieceType.Water, Piece.H)
+        ]
+        sut = UniqueConstraint([(0, 0), (3, 3)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+    def test_same_type_and_id(self):
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.H),
+            Piece(1, PieceType.D_S, Piece.V)
+        ]
+        sut = UniqueConstraint([(0, 0), (3, 3)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertFalse(result)
+
+    def test_same_type_diff_id(self):
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.H),
+            Piece(2, PieceType.D_S, Piece.H)
+        ]
+        sut = UniqueConstraint([(0, 0), (3, 3)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+    def test_diff_type_same_id(self):
+        assignment = [
+            Piece(1, PieceType.D_S, Piece.H),
+            Piece(1, PieceType.C_S, Piece.H)
+        ]
+        sut = UniqueConstraint([(0, 0), (3, 3)])
+
+        result = sut.is_satisfied(assignment)
+
+        self.assertTrue(result)
+
+
 if __name__ == "__main__":
     unittest.main()

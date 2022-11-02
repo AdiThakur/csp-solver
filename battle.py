@@ -140,6 +140,19 @@ class DiagonalConstraint(Constraint):
         return assignment[0].ptype == PieceType.Water or assignment[1].ptype == PieceType.Water
 
 
+class UniqueConstraint(Constraint):
+
+    def is_satisfied(self, assignment: List[Piece]) -> bool:
+
+        c1, c2 = assignment
+
+        if (c1.ptype == PieceType.Water) or (c2.ptype == PieceType.Water):
+            return True
+        if c1.ptype != c2.ptype:
+            return True
+        return c1.id != c2.id
+
+
 class CSP:
 
     variables: List[Cell]
@@ -340,37 +353,40 @@ def generate_ship_pieces(ship_count: List[int]) -> PossiblePieces:
         )
 
     # Destroyers
-    for i in range(ship_count[1]):
+    if len(ship_count) > 1:
+        for i in range(ship_count[1]):
 
-        pieces[START].append(Piece(i, PieceType.D_S, Piece.H))
-        pieces[END].append(Piece(i, PieceType.D_E, Piece.H))
+            pieces[START].append(Piece(i, PieceType.D_S, Piece.H))
+            pieces[END].append(Piece(i, PieceType.D_E, Piece.H))
 
-        pieces[START].append(Piece(i, PieceType.D_S, Piece.V))
-        pieces[END].append(Piece(i, PieceType.D_E, Piece.V))
-
-    # Cruisers
-    for i in range(ship_count[2]):
-
-        pieces[START].append(Piece(i, PieceType.C_S, Piece.H))
-        pieces[MID].append(Piece(i, PieceType.C_M, Piece.H))
-        pieces[END].append(Piece(i, PieceType.C_E, Piece.H))
-
-        pieces[START].append(Piece(i, PieceType.C_S, Piece.V))
-        pieces[MID].append(Piece(i, PieceType.C_M, Piece.V))
-        pieces[END].append(Piece(i, PieceType.C_E, Piece.V))
+            pieces[START].append(Piece(i, PieceType.D_S, Piece.V))
+            pieces[END].append(Piece(i, PieceType.D_E, Piece.V))
 
     # Cruisers
-    for i in range(ship_count[3]):
+    if len(ship_count) > 2:
+        for i in range(ship_count[2]):
 
-        pieces[START].append(Piece(i, PieceType.B_S, Piece.H))
-        pieces[MID].append(Piece(i, PieceType.B_M1, Piece.H))
-        pieces[MID].append(Piece(i, PieceType.B_M2, Piece.H))
-        pieces[END].append(Piece(i, PieceType.B_E, Piece.H))
+            pieces[START].append(Piece(i, PieceType.C_S, Piece.H))
+            pieces[MID].append(Piece(i, PieceType.C_M, Piece.H))
+            pieces[END].append(Piece(i, PieceType.C_E, Piece.H))
 
-        pieces[START].append(Piece(i, PieceType.B_S, Piece.V))
-        pieces[MID].append(Piece(i, PieceType.B_M1, Piece.V))
-        pieces[MID].append(Piece(i, PieceType.B_M2, Piece.V))
-        pieces[END].append(Piece(i, PieceType.B_E, Piece.V))
+            pieces[START].append(Piece(i, PieceType.C_S, Piece.V))
+            pieces[MID].append(Piece(i, PieceType.C_M, Piece.V))
+            pieces[END].append(Piece(i, PieceType.C_E, Piece.V))
+
+    # Battleships
+    if len(ship_count) > 3:
+        for i in range(ship_count[3]):
+
+            pieces[START].append(Piece(i, PieceType.B_S, Piece.H))
+            pieces[MID].append(Piece(i, PieceType.B_M1, Piece.H))
+            pieces[MID].append(Piece(i, PieceType.B_M2, Piece.H))
+            pieces[END].append(Piece(i, PieceType.B_E, Piece.H))
+
+            pieces[START].append(Piece(i, PieceType.B_S, Piece.V))
+            pieces[MID].append(Piece(i, PieceType.B_M1, Piece.V))
+            pieces[MID].append(Piece(i, PieceType.B_M2, Piece.V))
+            pieces[END].append(Piece(i, PieceType.B_E, Piece.V))
 
     return pieces
 
@@ -615,6 +631,24 @@ def generate_ship_cons(
     return constraints
 
 
+def generate_unique_cons(
+    flattened_vars: List[Cell],
+    vars_to_cons: Dict[Cell, List[Constraint]]) -> List[Constraint]:
+
+    constraints = []
+
+    for cell1 in flattened_vars:
+        for cell2 in flattened_vars:
+            if cell1 == cell2:
+                continue
+            scope = [cell1, cell2]
+            unique_con = UniqueConstraint(scope)
+            add_constraint_for_vars(vars_to_cons, scope, unique_con)
+            constraints.append(unique_con)
+
+    return constraints
+
+
 def main(input_filename: str, output_filename: str) -> None:
 
     row_sums, col_sums, ship_count, grid = read_input(input_filename)
@@ -625,16 +659,14 @@ def main(input_filename: str, output_filename: str) -> None:
     constraints = []
     vars_to_cons = {}
 
-    constraints += generate_sum_cons(vars, vars_to_cons, row_sums, col_sums)
-    constraints += generate_water_cons( vars, vars_to_cons)
-    constraints += generate_ship_cons(vars, vars_to_cons)
-
-    # TODO: generate constraints for grid;
-        # generate unique ship constraints for every pair of cells
-
     flattened_vars: List[Cell] = []
     for row in vars:
         flattened_vars.extend(row)
+
+    constraints += generate_sum_cons(vars, vars_to_cons, row_sums, col_sums)
+    constraints += generate_water_cons( vars, vars_to_cons)
+    constraints += generate_ship_cons(vars, vars_to_cons)
+    constraints += generate_unique_cons(flattened_vars, vars_to_cons)
 
     csp = CSP(
         flattened_vars,
