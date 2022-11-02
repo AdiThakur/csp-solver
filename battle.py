@@ -199,14 +199,17 @@ class CSP:
         self.pruned_domains[gac_level] = {}
         self.assigned[var] = True
 
-        for val_index in range(self.domains[var]):
+        for value in self.domains[var]:
 
             # Prune all other values for current variable
-            for other_index in range(self.domains[var]):
-                if val_index != other_index:
-                    self._prune_value(gac_level, var, other_index)
+            self.domains[var].remove(value)
+            if var not in self.pruned_domains[gac_level]:
+                self.pruned_domains[gac_level][var] = []
+            self.pruned_domains[gac_level][var].extend(self.domains[var])
+            self.domains[var] = [value]
 
             # Build gac-stack
+            self.gac_stack = []
             for constraint in self.vars_to_cons[var]:
                 self.gac_stack.append(constraint)
 
@@ -262,10 +265,11 @@ class CSP:
 
             constraint = self.gac_stack.pop()
 
-            for variable_index, variable in enumerate(constraint.scope):
-                for value_index, value in enumerate(self.domains[variable]):
+            for variable_index in range(len(constraint.scope)):
+                variable = constraint.scope[variable_index]
+                for value in self.domains[variable]:
 
-                    assignment = [-1] * len(constraint.scope)
+                    assignment: List[Piece] = [-1] * len(constraint.scope)
                     assignment[variable_index] = value
                     support_found = self._find_support(
                         variable_index, constraint, assignment, 0
@@ -274,17 +278,20 @@ class CSP:
                     if support_found:
                         continue
 
-                    self._prune_value(gac_level, variable, value_index)
+                    self.domains[variable].remove(value)
+                    if variable not in self.pruned_domains[gac_level]:
+                        self.pruned_domains[gac_level][variable] = []
+                    self.pruned_domains[gac_level][variable].append(value)
 
                     # DWO
                     if len(self.domains[variable]) == 0:
                         self.gac_stack = []
                         return False
 
-                    for constraint in self.vars_to_cons[variable]:
+                    for other_constraint in self.vars_to_cons[variable]:
                         # TODO: Implement a Hash augmented stack for faster lookup
-                        if constraint not in self.gac_stack:
-                            self.gac_stack.append(constraint)
+                        if other_constraint not in self.gac_stack:
+                            self.gac_stack.append(other_constraint)
 
         return True
 
@@ -674,6 +681,12 @@ def main(input_filename: str, output_filename: str) -> None:
         constraints,
         vars_to_cons
     )
+
+    sol_found = csp.satisfy()
+    if sol_found:
+        print(csp.domains)
+    else:
+        print("No sol found")
 
 
 if __name__ == "__main__":
