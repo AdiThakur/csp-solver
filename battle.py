@@ -10,18 +10,6 @@ Cell = Tuple[int, int]
 PossiblePieces = Tuple[List['Piece'], List['Piece'], List['Piece'], List['Piece']]
 
 
-input_chars = {
-    '0',
-    'S',
-    'W',
-    'L',
-    'R',
-    'T',
-    'B',
-    'M'
-}
-
-
 class PieceType(Enum):
     # Water
     Water = 0
@@ -336,8 +324,6 @@ def read_input(
     return row_cons, col_cons, ship_cons, grid
 
 
-# Returns pieces in three groups: subs and water, start pieces, middle pieces, end pieces
-# This does not include water; that should included in the domain generation logic
 def generate_ship_pieces(ship_count: List[int]) -> PossiblePieces:
 
     # submarines, destroyers, cruisers and battleships
@@ -483,7 +469,6 @@ def filter_pieces_by_orientation(
     return matching_pieces
 
 
-# TODO: Test this
 def generate_domain_from_hint(
     hint: str, pieces: PossiblePieces) -> List[Piece]:
 
@@ -574,6 +559,62 @@ def generate_water_cons(
 
     return constraints
 
+
+def generate_ship_cons(
+    vars: List[List[Cell]],
+    vars_to_cons: Dict[Cell, List[Constraint]]) -> List[Constraint]:
+
+    dim = len(vars)
+    constraints = []
+
+    for row in range(len(vars)):
+        for col in range(len(vars)):
+
+            # horizontal
+            fitting_types = get_fitting_ship_types(col, dim - col)
+
+            if PieceType.D_S in fitting_types:
+                scope = [(row, col), (row, col + 1)]
+                ship_con = DestroyerConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, ship_con)
+                constraints.append(ship_con)
+
+            if PieceType.C_S in fitting_types:
+                scope = [(row, col), (row, col + 1), (row, col + 2)]
+                ship_con = CruiserConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, ship_con)
+                constraints.append(ship_con)
+
+            if PieceType.B_S in fitting_types:
+                scope = [(row, col), (row, col + 1), (row, col + 2), (row, col + 3)]
+                ship_con = BattleshipConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, ship_con)
+                constraints.append(ship_con)
+
+            # vertical
+            fitting_types = get_fitting_ship_types(row, dim - row)
+
+            if PieceType.D_S in fitting_types:
+                scope = [(row, col), (row + 1, col)]
+                ship_con = DestroyerConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, ship_con)
+                constraints.append(ship_con)
+
+            if PieceType.C_S in fitting_types:
+                scope = [(row, col), (row + 1, col), (row + 2, col)]
+                ship_con = CruiserConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, ship_con)
+                constraints.append(ship_con)
+
+            if PieceType.B_S in fitting_types:
+                scope = [(row, col), (row + 1, col), (row + 2, col), (row + 3, col)]
+                ship_con = BattleshipConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, ship_con)
+                constraints.append(ship_con)
+
+    return constraints
+
+
 def main(input_filename: str, output_filename: str) -> None:
 
     row_sums, col_sums, ship_count, grid = read_input(input_filename)
@@ -586,9 +627,9 @@ def main(input_filename: str, output_filename: str) -> None:
 
     constraints += generate_sum_cons(vars, vars_to_cons, row_sums, col_sums)
     constraints += generate_water_cons( vars, vars_to_cons)
+    constraints += generate_ship_cons(vars, vars_to_cons)
 
     # TODO: generate constraints for grid;
-        # generate ship constraints for each ship
         # generate unique ship constraints for every pair of cells
 
     flattened_vars: List[Cell] = []
