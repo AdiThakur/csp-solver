@@ -338,9 +338,7 @@ def read_input(
 
 # Returns pieces in three groups: subs and water, start pieces, middle pieces, end pieces
 # This does not include water; that should included in the domain generation logic
-def generate_ship_pieces(
-    ship_count: List[int]
-    ) -> Tuple[List[Piece], List[Piece], List[Piece], List[Piece]]:
+def generate_ship_pieces(ship_count: List[int]) -> PossiblePieces:
 
     # submarines, destroyers, cruisers and battleships
     SUB = 0
@@ -405,8 +403,7 @@ def generate_variables(grid: Grid) -> List[List[Cell]]:
 
 
 def generate_domains(
-    grid: Grid, pieces: List[Piece]
-    ) -> Dict[Cell, List[Piece]]:
+    grid: Grid, pieces: PossiblePieces) -> Dict[Cell, List[Piece]]:
 
     domains = {}
 
@@ -525,8 +522,8 @@ def add_constraint_for_vars(
         add_constraint_for_var(vars_to_cons, var, constraint)
 
 
-def generate_sum_constraints(
-    vars: Grid,
+def generate_sum_cons(
+    vars: List[List[Cell]],
     vars_to_cons: Dict[Cell, List[Constraint]],
     row_sums: List[int],
     col_sums: List[int]) -> List[LineSumConstraint]:
@@ -549,22 +546,60 @@ def generate_sum_constraints(
     return constraints
 
 
+def generate_water_cons(
+    vars: List[List[Cell]],
+    vars_to_cons: Dict[Cell, List[Constraint]]) -> List[DiagonalConstraint]:
+
+    dim = len(vars)
+    constraints = []
+
+    for row in range(dim):
+        for col in range(len(vars[row])):
+
+            coord = (row, col)
+            bot_left_diag = (row + 1, col - 1)
+            bot_right_diag = (row + 1, col + 1)
+
+            if bot_left_diag[0] < dim and bot_left_diag[1] >= 0:
+                scope = [coord, bot_left_diag]
+                diag_con = DiagonalConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, diag_con)
+                constraints.append(diag_con)
+
+            if bot_right_diag[0] < dim and bot_right_diag[1] < dim:
+                scope = [coord, bot_right_diag]
+                diag_con = DiagonalConstraint(scope)
+                add_constraint_for_vars(vars_to_cons, scope, diag_con)
+                constraints.append(diag_con)
+
+    return constraints
+
 def main(input_filename: str, output_filename: str) -> None:
 
     row_sums, col_sums, ship_count, grid = read_input(input_filename)
-    vars = generate_variables(grid)
     pieces = generate_ship_pieces(ship_count)
+
+    vars = generate_variables(grid)
     domains = generate_domains(grid, pieces)
+    constraints = []
+    vars_to_cons = {}
+
+    constraints += generate_sum_cons(vars, vars_to_cons, row_sums, col_sums)
+    constraints += generate_water_cons( vars, vars_to_cons)
 
     # TODO: generate constraints for grid;
-        # generate diagonal water constraints
         # generate ship constraints for each ship
         # generate unique ship constraints for every pair of cells
 
-    vars_to_cons = {}
+    flattened_vars: List[Cell] = []
+    for row in vars:
+        flattened_vars.extend(row)
 
-    row_and_col_sum_cons = generate_sum_constraints(
-        vars, vars_to_cons, row_sums, col_sums
+    csp = CSP(
+        flattened_vars,
+        domains,
+        constraints,
+        vars_to_cons
     )
 
 
