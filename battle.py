@@ -40,6 +40,7 @@ class PieceType(Enum):
     B_M2 = 43
     B_E = 44
 
+
 class Piece:
 
     id: int
@@ -335,8 +336,9 @@ def read_input(
     return row_cons, col_cons, ship_cons, grid
 
 
-# Returns pieces in three groups: subs, start pieces, middle pieces, end pieces
-def generate_pieces(
+# Returns pieces in three groups: subs and water, start pieces, middle pieces, end pieces
+# This does not include water; that should included in the domain generation logic
+def generate_ship_pieces(
     ship_count: List[int]
     ) -> Tuple[List[Piece], List[Piece], List[Piece], List[Piece]]:
 
@@ -411,7 +413,10 @@ def generate_domains(
     for row in range(len(grid)):
         for col in range(len(grid[row])):
             if grid[row][col] == '0':
-                domain = generate_domain_from_coordinate((row, col), pieces)
+                flattened_pieces: List[Piece] = pieces[0] + pieces[1] + pieces[2] + pieces[3]
+                domain = generate_domain_from_coordinate(
+                    (row, col), len(grid), flattened_pieces
+                )
             else:
                 domain = generate_domain_from_hint(grid[row][col], pieces)
             domains[(row, col)] = domain
@@ -419,11 +424,56 @@ def generate_domains(
     return domains
 
 
+def get_fitting_ship_types(start: int, space_avail: int) -> List[PieceType]:
+
+    # All cells can hold subs
+    fitting_types = [PieceType.Sub]
+
+    # Add starting pieces if they fit
+    if space_avail >= 4:
+        fitting_types.append(PieceType.B_S)
+    if space_avail >= 3:
+        fitting_types.append(PieceType.C_S)
+    if space_avail >= 2:
+        fitting_types.append(PieceType.D_S)
+
+    # Add middle pieces if they fit
+    if start >= 1 and space_avail >= 2:
+        fitting_types.append(PieceType.C_M)
+    if start >= 1 and space_avail >= 3:
+        fitting_types.append(PieceType.B_M1)
+    if start >= 2 and space_avail >= 2:
+        fitting_types.append(PieceType.B_M2)
+
+    # Add ending pieces if they fit
+    if start >= 3:
+        fitting_types.append(PieceType.B_E)
+    if start >= 2:
+        fitting_types.append(PieceType.C_E)
+    if start >= 1:
+        fitting_types.append(PieceType.D_E)
+
+    return fitting_types
+
+
 def generate_domain_from_coordinate(
-    coord: Cell,
-    pieces: PossiblePieces
-    ) -> List[Piece]:
-    pass
+    coord: Cell, dimension: int, possible_ship_pieces: List[Piece]) -> List[Piece]:
+
+    # Every non hint cell can contain water
+    domain = [
+        Piece(id=0, ptype=PieceType.Water, orientation=Piece.H)
+    ]
+
+    vertical_types = get_fitting_ship_types(coord[0], dimension - coord[0])
+    horizontal_types = get_fitting_ship_types(coord[1], dimension - coord[1])
+
+    for piece in possible_ship_pieces:
+        if piece.orientation == Piece.H and piece.ptype in horizontal_types:
+            domain.append(piece)
+        if piece.orientation == Piece.V and piece.ptype in vertical_types:
+            domain.append(piece)
+
+    return domain
 
 
 def filter_pieces_by_orientation(
@@ -436,6 +486,7 @@ def filter_pieces_by_orientation(
     return matching_pieces
 
 
+# TODO: Test this
 def generate_domain_from_hint(
     hint: str, pieces: PossiblePieces) -> List[Piece]:
 
@@ -470,7 +521,7 @@ def main(input_filename: str, output_filename: str) -> None:
 
     row_cons, col_cons, ship_count, grid = read_input(input_filename)
     vars = generate_variables(grid)
-    pieces = generate_pieces(ship_count)
+    pieces = generate_ship_pieces(ship_count)
     domains = generate_domains(grid, pieces)
 
 
