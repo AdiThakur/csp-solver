@@ -615,10 +615,8 @@ def generate_unique_cons(
 
     constraints = []
 
-    for cell1 in flattened_vars:
-        for cell2 in flattened_vars:
-            if cell1 == cell2:
-                continue
+    for i, cell1 in enumerate(flattened_vars):
+        for cell2 in flattened_vars[i + 1:]:
             scope = [cell1, cell2]
             unique_con = UniqueConstraint(scope)
             add_constraint_for_vars(vars_to_cons, scope, unique_con)
