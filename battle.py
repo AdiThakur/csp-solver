@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import copy
 from enum import Enum
 import sys
 from typing import *
@@ -51,6 +52,10 @@ class Piece:
     def __repr__(self) -> str:
         return f"Id: {self.id}, Type: {self.ptype}, orient: {self.orientation}"
 
+    def __eq__(self, other: 'Piece') -> bool:
+        if self.id == other.id and self.ptype == other.ptype and self.orientation == other.orientation:
+            return True
+        return False
 
 class Constraint(ABC):
 
@@ -222,7 +227,7 @@ class CSP:
             # Restore all pruned values
             for pruned_var in self.pruned_domains[level]:
                 self.domains[pruned_var].extend(self.pruned_domains[level][pruned_var])
-                self.pruned_domains[level][pruned_var] = []
+            self.pruned_domains[level] = {}
 
         self.values[var] = None
         self.assigned[var] = False
@@ -241,7 +246,9 @@ class CSP:
             else:
                 assignment[i] = self.values[con_var]
 
-        for value in self.domains[var]:
+        og_domain = copy.copy(self.domains[var])
+
+        for value in og_domain:
             assignment[var_i] = value
             if not constraint.is_satisfied(assignment):
                 # Prune value
@@ -424,6 +431,7 @@ def get_fitting_ship_types(start: int, space_avail: int) -> List[PieceType]:
     return fitting_types
 
 
+# TODO: Take sum constraints into account when assigning domains
 def generate_domain_from_coordinate(
     coord: Cell, dimension: int, possible_ship_pieces: List[Piece]) -> List[Piece]:
 
@@ -546,6 +554,7 @@ def generate_water_cons(
 
 
 def generate_ship_cons(
+    ship_counts: List[int],
     vars: List[List[Cell]],
     vars_to_cons: Dict[Cell, List[Constraint]]) -> List[Constraint]:
 
@@ -558,19 +567,19 @@ def generate_ship_cons(
             # horizontal
             fitting_types = get_fitting_ship_types(col, dim - col)
 
-            if PieceType.D_S in fitting_types:
+            if ship_counts[1] > 0 and PieceType.D_S in fitting_types:
                 scope = [(row, col), (row, col + 1)]
                 ship_con = DestroyerConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if PieceType.C_S in fitting_types:
+            if ship_counts[2] > 0 and PieceType.C_S in fitting_types:
                 scope = [(row, col), (row, col + 1), (row, col + 2)]
                 ship_con = CruiserConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if PieceType.B_S in fitting_types:
+            if ship_counts[3] > 0 and PieceType.B_S in fitting_types:
                 scope = [(row, col), (row, col + 1), (row, col + 2), (row, col + 3)]
                 ship_con = BattleshipConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
@@ -579,19 +588,19 @@ def generate_ship_cons(
             # vertical
             fitting_types = get_fitting_ship_types(row, dim - row)
 
-            if PieceType.D_S in fitting_types:
+            if ship_counts[1] > 0 and PieceType.D_S in fitting_types:
                 scope = [(row, col), (row + 1, col)]
                 ship_con = DestroyerConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if PieceType.C_S in fitting_types:
+            if ship_counts[2] > 0 and PieceType.C_S in fitting_types:
                 scope = [(row, col), (row + 1, col), (row + 2, col)]
                 ship_con = CruiserConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if PieceType.B_S in fitting_types:
+            if ship_counts[3] > 0 and PieceType.B_S in fitting_types:
                 scope = [(row, col), (row + 1, col), (row + 2, col), (row + 3, col)]
                 ship_con = BattleshipConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
@@ -642,24 +651,26 @@ def get_output_symbol(piece: Piece) -> str:
     return ''
 
 
-def print_goal_state(
-    vars: List[List[Cell]], values: Dict[Cell, Piece]
-    ) -> None:
+def format_output(
+    vars: List[List[Cell]], values: Dict[Cell, Piece]) -> Grid:
+
+    output_grid = []
 
     for row in vars:
-        output_row = ""
+        output_row = []
         for cell in row:
             out_symbol = get_output_symbol(values[cell])
-            output_row += f"{out_symbol} "
-        print(output_row)
+            output_row.append(out_symbol)
+        output_grid.append(output_row)
 
+    return output_grid
 
 def run_csp(
     row_sums: List[int],
     col_sums: List[int],
     ship_count: List[int],
     grid: Grid
-    ) -> None:
+    ) -> Tuple[bool, Grid, CSP]:
 
     pieces = generate_ship_pieces(ship_count)
 
@@ -674,7 +685,7 @@ def run_csp(
 
     constraints += generate_sum_cons(vars, vars_to_cons, row_sums, col_sums)
     constraints += generate_water_cons( vars, vars_to_cons)
-    constraints += generate_ship_cons(vars, vars_to_cons)
+    constraints += generate_ship_cons(ship_count, vars, vars_to_cons)
     constraints += generate_unique_cons(flattened_vars, vars_to_cons)
 
     csp = CSP(
@@ -685,16 +696,29 @@ def run_csp(
     )
 
     sol_found = csp.satisfy()
+    output_grid: Grid = []
+
     if sol_found:
-        print_goal_state(vars, csp.values)
+        output_grid = format_output(vars, csp.values)
     else:
         print("No sol found")
+
+
+    return sol_found, output_grid, csp
 
 
 def main(input_filename: str, output_filename: str) -> None:
 
     row_sums, col_sums, ship_count, grid = read_input(input_filename)
-    run_csp(row_sums, col_sums, ship_count, grid)
+    sol_found, output_grid, _ = run_csp(row_sums, col_sums, ship_count, grid)
+
+    if sol_found:
+        with open(output_filename, 'w') as file:
+            for row in output_grid:
+                output_row = ""
+                for cell in row:
+                    output_row += cell
+                file.write(output_row + "\n")
 
 
 if __name__ == "__main__":
