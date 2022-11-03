@@ -45,6 +45,9 @@ class Piece:
         self.ptype = ptype
         self.orientation = orientation
 
+    def __str__(self) -> str:
+        return str(self.ptype)
+
     def __repr__(self) -> str:
         return f"Id: {self.id}, Type: {self.ptype}, orient: {self.orientation}"
 
@@ -155,6 +158,7 @@ class UniqueConstraint(Constraint):
 
 class CSP:
 
+    values: Dict[Cell, Piece]
     variables: List[Cell]
     domains: Dict[Cell, List[Piece]]
     constraints: List[Constraint]
@@ -171,7 +175,7 @@ class CSP:
         constraints: List[Constraint],
         vars_to_cons: Dict[Cell, List[Constraint]]
         ) -> None:
-
+        self.values = {}
         self.variables = variables
         self.domains = domains
         self.constraints = constraints
@@ -182,71 +186,91 @@ class CSP:
         self.gac_stack = []
 
     def satisfy(self) -> bool:
-        self._gac_enforce(0)
-        return self._gac(0)
+        return self._fc(0)
 
     def _init_assigned(self) -> None:
         self.assigned = {}
         for variable in self.variables:
             self.assigned[variable] = False
+            self.values[variable] = None
 
-    def _gac(self, gac_level: int) -> bool:
+    def _fc(self, level: int) -> bool:
 
         var = self._pick_unassigned_variable()
         if var is None:
             return True
 
-        self.pruned_domains[gac_level] = {}
+        self.pruned_domains[level] = {}
         self.assigned[var] = True
 
         for value in self.domains[var]:
 
-            # Prune all other values for current variable
-            self.domains[var].remove(value)
-            if var not in self.pruned_domains[gac_level]:
-                self.pruned_domains[gac_level][var] = []
-            self.pruned_domains[gac_level][var].extend(self.domains[var])
-            self.domains[var] = [value]
+            self.values[var] = value
+            dwo = False
 
-            # Build gac-stack
-            self.gac_stack = []
             for constraint in self.vars_to_cons[var]:
-                self.gac_stack.append(constraint)
+                count, unassigned_var = self._get_last_unassigned(constraint)
+                # Only one unassigned variable in scope
+                if count == 1:
+                    if self._fc_check(constraint, unassigned_var, level):
+                        dwo = True
+                        break
 
-            # CSP is GAC
-            if self._gac_enforce(gac_level):
-                if self._gac(gac_level + 1):
+            if not dwo:
+                if self._fc(level + 1):
                     return True
+            # Restore all pruned values
+            for pruned_var in self.pruned_domains[level]:
+                self.domains[pruned_var].extend(self.pruned_domains[level][pruned_var])
+                self.pruned_domains[level][pruned_var] = []
 
-            # Restore domains of all affected variables
-            for affected_var in self.pruned_domains[gac_level]:
-                self.domains[affected_var].extend(
-                    self.pruned_domains[gac_level][affected_var]
-                )
-                self.pruned_domains[gac_level][affected_var] = []
-
+        self.values[var] = None
         self.assigned[var] = False
-        self.pruned_domains.pop(gac_level, None)
 
         return False
 
-    def _prune_value(
-        self, gac_level: int, variable: Cell, index_to_prune: int
-        ) -> None:
+    def _fc_check(self, constraint: Constraint, var: Cell, level: int) -> bool:
 
-        val_to_prune = self.domains[variable][index_to_prune]
-        self.domains[variable][index_to_prune] = self.domains[variable][-1]
-        self.domains[variable].pop()
+        assignment = [None] * len(constraint.scope)
+        var_i = 0
 
-        if variable not in self.pruned_domains[gac_level]:
-            self.pruned_domains[gac_level][variable] = []
+        for i in range(len(constraint.scope)):
+            con_var = constraint.scope[i]
+            if con_var == var:
+                var_i = i
+            else:
+                assignment[i] = self.values[con_var]
 
-        self.pruned_domains[gac_level][variable].append(val_to_prune)
+        for value in self.domains[var]:
+            assignment[var_i] = value
+            if not constraint.is_satisfied(assignment):
+                # Prune value
+                self.domains[var].remove(value)
+                if var not in self.pruned_domains[level]:
+                    self.pruned_domains[level][var] = []
+                self.pruned_domains[level][var].append(value)
+            if len(self.domains[var]) == 0:
+                return True
+
+        return False
+
+    def _get_last_unassigned(
+        self, constraint: Constraint) -> Tuple[int, Optional[Cell]]:
+
+        unassigned_count = 0
+        unassigned_var = None
+
+        for var in constraint.scope:
+            if self.assigned[var] == False:
+                unassigned_count += 1
+                unassigned_var = var
+
+        return unassigned_count, unassigned_var
 
     def _pick_unassigned_variable(self) -> Optional[Cell]:
 
         mrv_variable: Optional[Cell] = None
-        min_domain = 100
+        min_domain = 1000
 
         for variable in self.variables:
             if self.assigned[variable]:
@@ -257,68 +281,6 @@ class CSP:
                 mrv_variable = variable
 
         return mrv_variable
-
-    # Returns True if CSP is GAC, False if DWO occurs
-    def _gac_enforce(self, gac_level: int) -> bool:
-
-        while len(self.gac_stack) > 0:
-
-            constraint = self.gac_stack.pop()
-
-            for variable_index in range(len(constraint.scope)):
-                variable = constraint.scope[variable_index]
-                for value in self.domains[variable]:
-
-                    assignment: List[Piece] = [-1] * len(constraint.scope)
-                    assignment[variable_index] = value
-                    support_found = self._find_support(
-                        variable_index, constraint, assignment, 0
-                    )
-
-                    if support_found:
-                        continue
-
-                    self.domains[variable].remove(value)
-                    if variable not in self.pruned_domains[gac_level]:
-                        self.pruned_domains[gac_level][variable] = []
-                    self.pruned_domains[gac_level][variable].append(value)
-
-                    # DWO
-                    if len(self.domains[variable]) == 0:
-                        self.gac_stack = []
-                        return False
-
-                    for other_constraint in self.vars_to_cons[variable]:
-                        # TODO: Implement a Hash augmented stack for faster lookup
-                        if other_constraint not in self.gac_stack:
-                            self.gac_stack.append(other_constraint)
-
-        return True
-
-    def _find_support(
-        self,
-        support_for: int,
-        constraint: Constraint,
-        assignment: List[Piece],
-        variable_index: int
-        ) -> bool:
-
-        if variable_index == len(constraint.scope):
-            return constraint.is_satisfied(assignment)
-        if variable_index == support_for:
-            return self._find_support(
-                support_for, constraint, assignment, variable_index + 1
-            )
-
-        for value in self.domains[constraint.scope[variable_index]]:
-            assignment[variable_index] = value
-            valid = self._find_support(
-                support_for, constraint, assignment, variable_index + 1
-            )
-            if valid:
-                return True
-
-        return False
 
 
 def read_input(
@@ -656,6 +618,42 @@ def generate_unique_cons(
     return constraints
 
 
+def get_output_symbol(piece: Piece) -> str:
+
+    if piece.ptype == PieceType.Water:
+        return 'W'
+    if piece.ptype == PieceType.Sub:
+        return 'S'
+    if piece.ptype in [PieceType.C_M, PieceType.B_M1, PieceType.B_M2]:
+        return 'M'
+
+    # Oriented pieces
+    if piece.orientation == Piece.H:
+        if piece.ptype in [PieceType.D_S, PieceType.C_S, PieceType.B_S]:
+            return 'L'
+        if piece.ptype in [PieceType.D_E, PieceType.C_E, PieceType.B_E]:
+            return 'R'
+    else:
+        if piece.ptype in [PieceType.D_S, PieceType.C_S, PieceType.B_S]:
+            return 'T'
+        if piece.ptype in [PieceType.D_E, PieceType.C_E, PieceType.B_E]:
+            return 'B'
+
+    return ''
+
+
+def print_goal_state(
+    vars: List[List[Cell]], values: Dict[Cell, Piece]
+    ) -> None:
+
+    for row in vars:
+        output_row = ""
+        for cell in row:
+            out_symbol = get_output_symbol(values[cell])
+            output_row += f"{out_symbol} "
+        print(output_row)
+
+
 def main(input_filename: str, output_filename: str) -> None:
 
     row_sums, col_sums, ship_count, grid = read_input(input_filename)
@@ -684,20 +682,20 @@ def main(input_filename: str, output_filename: str) -> None:
 
     sol_found = csp.satisfy()
     if sol_found:
-        print(csp.domains)
+        print_goal_state(vars, csp.values)
     else:
         print("No sol found")
 
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 3:
-        print("Usage: python3 battle.py <input_file> <output_file>")
-        exit()
+    # if len(sys.argv) != 3:
+    #     print("Usage: python3 battle.py <input_file> <output_file>")
+    #     exit()
 
-    main(
-        input_filename=sys.argv[1],
-        output_filename=sys.argv[2]
-    )
+    # main(
+    #     input_filename=sys.argv[1],
+    #     output_filename=sys.argv[2]
+    # )
 
-# TODO: Prune domain based off coordinates; clearly cell at (0,0) can't have a middle or end piece type
+    main(f"./battle_validate/input_{'easy1'}.txt", "out.txt")
