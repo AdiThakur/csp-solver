@@ -57,6 +57,7 @@ class Piece:
             return True
         return False
 
+
 class Constraint(ABC):
 
     scope: List[Cell] = []
@@ -158,7 +159,9 @@ class UniqueConstraint(Constraint):
             return True
         if c1.ptype != c2.ptype:
             return True
-        return c1.id != c2.id
+        if c1.id == c2.id:
+            return False
+        return True
 
 
 class CSP:
@@ -216,7 +219,7 @@ class CSP:
             for constraint in self.vars_to_cons[var]:
                 count, unassigned_var = self._get_last_unassigned(constraint)
                 # Only one unassigned variable in scope
-                if count == 1:
+                if count == 1 and unassigned_var is not None:
                     if self._fc_check(constraint, unassigned_var, level):
                         dwo = True
                         break
@@ -435,10 +438,7 @@ def get_fitting_ship_types(start: int, space_avail: int) -> List[PieceType]:
 def generate_domain_from_coordinate(
     coord: Cell, dimension: int, possible_ship_pieces: List[Piece]) -> List[Piece]:
 
-    # Every non hint cell can contain water
-    domain = [
-        Piece(id=0, ptype=PieceType.Water, orientation=Piece.H)
-    ]
+    domain = []
 
     vertical_types = get_fitting_ship_types(coord[0], dimension - coord[0])
     horizontal_types = get_fitting_ship_types(coord[1], dimension - coord[1])
@@ -448,6 +448,9 @@ def generate_domain_from_coordinate(
             domain.append(piece)
         if piece.orientation == Piece.V and piece.ptype in vertical_types:
             domain.append(piece)
+
+    # Every non hint cell can contain water
+    domain.append(Piece(id=0, ptype=PieceType.Water, orientation=Piece.H))
 
     return domain
 
@@ -561,25 +564,29 @@ def generate_ship_cons(
     dim = len(vars)
     constraints = []
 
+    has_destroyer = (len(ship_counts) > 1) and (ship_counts[1] > 0)
+    has_cruiser = (len(ship_counts) > 2) and (ship_counts[2] > 0)
+    has_battle_ship = (len(ship_counts) > 3) and (ship_counts[3] > 0)
+
     for row in range(len(vars)):
         for col in range(len(vars)):
 
             # horizontal
             fitting_types = get_fitting_ship_types(col, dim - col)
 
-            if ship_counts[1] > 0 and PieceType.D_S in fitting_types:
+            if  has_destroyer and PieceType.D_S in fitting_types:
                 scope = [(row, col), (row, col + 1)]
                 ship_con = DestroyerConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if ship_counts[2] > 0 and PieceType.C_S in fitting_types:
+            if has_cruiser and PieceType.C_S in fitting_types:
                 scope = [(row, col), (row, col + 1), (row, col + 2)]
                 ship_con = CruiserConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if ship_counts[3] > 0 and PieceType.B_S in fitting_types:
+            if has_battle_ship and PieceType.B_S in fitting_types:
                 scope = [(row, col), (row, col + 1), (row, col + 2), (row, col + 3)]
                 ship_con = BattleshipConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
@@ -588,19 +595,19 @@ def generate_ship_cons(
             # vertical
             fitting_types = get_fitting_ship_types(row, dim - row)
 
-            if ship_counts[1] > 0 and PieceType.D_S in fitting_types:
+            if has_destroyer and PieceType.D_S in fitting_types:
                 scope = [(row, col), (row + 1, col)]
                 ship_con = DestroyerConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if ship_counts[2] > 0 and PieceType.C_S in fitting_types:
+            if has_cruiser and PieceType.C_S in fitting_types:
                 scope = [(row, col), (row + 1, col), (row + 2, col)]
                 ship_con = CruiserConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
                 constraints.append(ship_con)
 
-            if ship_counts[3] > 0 and PieceType.B_S in fitting_types:
+            if has_battle_ship and PieceType.B_S in fitting_types:
                 scope = [(row, col), (row + 1, col), (row + 2, col), (row + 3, col)]
                 ship_con = BattleshipConstraint(scope)
                 add_constraint_for_vars(vars_to_cons, scope, ship_con)
@@ -682,7 +689,7 @@ def run_csp(
         flattened_vars.extend(row)
 
     constraints += generate_sum_cons(vars, vars_to_cons, row_sums, col_sums)
-    constraints += generate_water_cons( vars, vars_to_cons)
+    constraints += generate_water_cons(vars, vars_to_cons)
     constraints += generate_ship_cons(ship_count, vars, vars_to_cons)
     constraints += generate_unique_cons(flattened_vars, vars_to_cons)
 
