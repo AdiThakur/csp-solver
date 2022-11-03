@@ -654,9 +654,13 @@ def print_goal_state(
         print(output_row)
 
 
-def main(input_filename: str, output_filename: str) -> None:
+def run_csp(
+    row_sums: List[int],
+    col_sums: List[int],
+    ship_count: List[int],
+    grid: Grid
+    ) -> None:
 
-    row_sums, col_sums, ship_count, grid = read_input(input_filename)
     pieces = generate_ship_pieces(ship_count)
 
     vars = generate_variables(grid)
@@ -685,6 +689,12 @@ def main(input_filename: str, output_filename: str) -> None:
         print_goal_state(vars, csp.values)
     else:
         print("No sol found")
+
+
+def main(input_filename: str, output_filename: str) -> None:
+
+    row_sums, col_sums, ship_count, grid = read_input(input_filename)
+    run_csp(row_sums, col_sums, ship_count, grid)
 
 
 if __name__ == "__main__":
