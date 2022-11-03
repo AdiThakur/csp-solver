@@ -1,7 +1,7 @@
-from abc import ABC, abstractmethod
 import copy
-from enum import Enum
 import sys
+from abc import ABC, abstractmethod
+from enum import Enum
 from typing import *
 
 
@@ -434,7 +434,6 @@ def get_fitting_ship_types(start: int, space_avail: int) -> List[PieceType]:
     return fitting_types
 
 
-# TODO: Take sum constraints into account when assigning domains
 def generate_domain_from_coordinate(
     coord: Cell, dimension: int, possible_ship_pieces: List[Piece]) -> List[Piece]:
 
@@ -670,6 +669,7 @@ def format_output(
 
     return output_grid
 
+
 def run_csp(
     row_sums: List[int],
     col_sums: List[int],
@@ -708,7 +708,6 @@ def run_csp(
     else:
         print("No sol found")
 
-
     return sol_found, output_grid, csp
 
 
@@ -728,13 +727,11 @@ def main(input_filename: str, output_filename: str) -> None:
 
 if __name__ == "__main__":
 
-    # if len(sys.argv) != 3:
-    #     print("Usage: python3 battle.py <input_file> <output_file>")
-    #     exit()
+    if len(sys.argv) != 3:
+        print("Usage: python3 battle.py <input_file> <output_file>")
+        exit()
 
-    # main(
-    #     input_filename=sys.argv[1],
-    #     output_filename=sys.argv[2]
-    # )
-
-    main(f"./battle_validate/input_{'easy1'}.txt", "out.txt")
+    main(
+        input_filename=sys.argv[1],
+        output_filename=sys.argv[2]
+    )
