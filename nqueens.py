@@ -1,7 +1,8 @@
 import sys
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
-from csp import CSP, Assignment, Constraint, Domain, Variable
+from csp_builder import CSPBuilder
+from csp import Assignment, Constraint, Domain
 
 
 QUEEN_CHAR = 'Q'
@@ -27,9 +28,49 @@ class DiagonalConstraint(Constraint):
         return f"DC: {self.scope}"
 
 
+class NQueensSolver():
+
+    def __init__(self, dimension: int, starting_queens: List[int]) -> None:
+        self.dimension: int = dimension
+        self.starting_queens: List[int] = starting_queens
+        self.builder: CSPBuilder = CSPBuilder()
+
+    def solve(self) -> Domain:
+        self._add_variables()
+        self._add_constraints()
+        csp = self.builder.build()
+        _, solution = csp.satisfy()
+
+        return solution
+
+    def _add_variables(self) -> None:
+        for var in range(self.dimension):
+            if self.starting_queens[var] == NO_QUEEN_INDEX:
+                self.builder.add_variable(var, [col for col in range(self.dimension)])
+            else:
+                self.builder.add_variable(var, [self.starting_queens[var]])
+
+    def _add_constraints(self) -> None:
+        self._add_vertical_constraints()
+        self._add_diagonal_constraints()
+
+    def _add_vertical_constraints(self) -> None:
+        for var1 in range(self.dimension):
+            for var2 in range(var1 + 1, self.dimension, 1):
+                constraint = VerticalConstraint([var1, var2])
+                self.builder.add_constraint(constraint)
+
+    def _add_diagonal_constraints(self) -> None:
+        for var1 in range(self.dimension):
+            for var2 in range(var1 + 1, self.dimension, 1):
+                constraint = DiagonalConstraint([var1, var2])
+                self.builder.add_constraint(constraint)
+
+
 def main(input_filename: str) -> None:
     dimension, starting_queens = read_input(input_filename)
-    solution = solve(dimension, starting_queens)
+    solver = NQueensSolver(dimension, starting_queens)
+    solution = solver.solve()
     print_solution(dimension, solution)
 
 
@@ -48,83 +89,6 @@ def read_input(input_filename: str) -> Tuple[int, List[int]]:
                 starting_queens.append(int(char))
 
     return dimension, starting_queens
-
-
-def solve(dimension: int, starting_queens: List[int]) -> Domain:
-    vars, domains, assigned_vars = generate_vars_and_domains(dimension, starting_queens)
-    constraints, vars_to_cons = generate_constraints(vars)
-    solver = CSP(vars, domains, constraints, vars_to_cons, assigned_vars)
-    _, solution = solver.satisfy()
-
-    return solution
-
-
-def generate_vars_and_domains(
-    dimension: int, starting_queens: List[int]
-    ) -> Tuple[List[Variable], Domain, List[Variable]]:
-
-    variables: List[Variable] = []
-    domains: Domain = {}
-    assigned_vars: List[Variable] = []
-
-    for i in range(dimension):
-
-        variable = i
-        variables.append(variable)
-
-        if starting_queens[i] == NO_QUEEN_INDEX:
-            domains[variable] = [x for x in range(dimension)]
-        else:
-            domains[variable] = [starting_queens[i]]
-            assigned_vars.append(variable)
-
-    return variables, domains, assigned_vars
-
-
-def generate_constraints(
-    vars: List[Variable]) -> Tuple[List[Constraint], Dict[Variable, List[Constraint]]]:
-
-    constraints = []
-    vars_to_cons = {}
-    for variable in vars:
-        vars_to_cons[variable] = []
-
-    constraints += (generate_vertical_constraints(vars, vars_to_cons))
-    constraints += (generate_diagonal_constraints(vars, vars_to_cons))
-
-    return constraints, vars_to_cons
-
-
-def generate_vertical_constraints(
-    vars: List[Variable], vars_to_cons: Dict[Variable, List[Constraint]]
-    ) -> List[Constraint]:
-
-    vertical_constraints = []
-
-    for var1 in range(len(vars)):
-        for var2 in range(var1 + 1, len(vars), 1):
-            constraint = VerticalConstraint([var1, var2])
-            vertical_constraints.append(constraint)
-            vars_to_cons[var1].append(constraint)
-            vars_to_cons[var2].append(constraint)
-
-    return vertical_constraints
-
-
-def generate_diagonal_constraints(
-    vars: List[Variable], vars_to_cons: Dict[Variable, List[Constraint]]
-    ) -> List[Constraint]:
-
-    diagonal_constraints = []
-
-    for var1 in range(len(vars)):
-        for var2 in range(var1 + 1, len(vars), 1):
-            constraint = DiagonalConstraint([var1, var2])
-            diagonal_constraints.append(constraint)
-            vars_to_cons[var1].append(constraint)
-            vars_to_cons[var2].append(constraint)
-
-    return diagonal_constraints
 
 
 def print_solution(dimension: int, solution: Domain) -> None:
